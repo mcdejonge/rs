@@ -3,6 +3,7 @@
 ;; Main rs file. Contains the main loop and functions for interacting with it.
 
 (provide
+ rs-set-global-bpm!
  rs-set-global-division-length!
  rs-set-global-num-divisions!
  rs-start-main-loop!
@@ -24,7 +25,7 @@
 
 (define rs-main-division-time-in-secs 0.0)
 
-(define rs-main-sleep-time-in-secs 0.0)
+(define rs-main-sleep-time-in-secs 0.0) ; Not sure if this is needed?
 
 ; Int, num -> float
 (define (rs-calculate-division-length-ms bpm division-length)
@@ -42,12 +43,17 @@
 (define/contract (rs-set-global-num-divisions! num-divisions)
   (-> positive? void)
   ; Set the global number of divisions.
-
   (set! rs-main-num-divisions num-divisions)
   (rs-main-recalculate-time-values!))
 
+(define/contract (rs-set-global-bpm! bpm)
+  (-> positive? void)
+  ; Set the global BPM.
+  (set! rs-main-bpm bpm)
+  (rs-main-recalculate-time-values!))
+
 (define/contract (rs-set-global-division-length! division-length)
-  (-> positive?)
+  (-> positive? void)
   (set! rs-main-division-length division-length)
   (rs-main-recalculate-time-values!))
 
@@ -60,6 +66,9 @@
         (thread
          (lambda ()
            (let loop ()
+             ; Below is an example of a loop with subdivisions. The
+             ; main loop will not do this, but the individual channels
+             ; will
              (printf "Loop starts\n")
              ; (sleep sleep-time-in-secs)
              (for ([step-no (in-range rs-main-num-divisions)])
