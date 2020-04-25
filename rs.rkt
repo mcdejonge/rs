@@ -9,6 +9,8 @@
  rs-start-main-loop!
  rs-stop-main-loop!)
 
+(require "rs-util.rkt")
+
 (define rs-main-loop '())
 
 (define rs-main-bpm 120)
@@ -27,11 +29,6 @@
 
 (define rs-main-sleep-time-in-secs 0.0) ; Not sure if this is needed?
 
-; Int, num -> float
-(define (rs-calculate-division-length-ms bpm division-length)
-  ; Calculate the length of a division in ms.
-  (* (* (/ 60000 bpm) division-length) 1.0))
-
 (define (rs-main-recalculate-time-values!)
   (set! rs-main-division-length-ms
         (rs-calculate-division-length-ms rs-main-bpm rs-main-division-length))
@@ -39,6 +36,11 @@
         (/ rs-main-division-length-ms 1000))
   (set! rs-main-sleep-time-in-secs
     (* rs-main-num-divisions rs-main-division-time-in-secs)))
+
+;; TODO contracts may seem nice, but they cause the program to stop,
+;; which is not what you want in a sequencer. For public functions
+;; just output an error message, refuse to do something stupid and
+;; continue.
 
 (define/contract (rs-set-global-num-divisions! num-divisions)
   (-> positive? void)
