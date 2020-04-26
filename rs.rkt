@@ -10,12 +10,16 @@
  rs-set-global-bpm!
  rs-set-global-div-length!
  rs-set-global-num-divs!
+ rs-stop-track!
  rs-start-main-loop!
- rs-stop-main-loop!)
+ rs-stop-main-loop!
+ )
 
-(require "rs-util.rkt"
-         "rs-t.rkt"
-         ffi/unsafe/atomic)
+(require
+ "rs-e.rkt"
+ "rs-t.rkt"
+ "rs-util.rkt"
+ ffi/unsafe/atomic)
 
 (define rs-main-loop '())
 
@@ -74,15 +78,22 @@
   (set! rs-main-div-length div-length)
   (rs-main-recalculate-time-values!))
 
-(define/contract (rs-stop-track track-no)
+(define/contract (rs-stop-track! track-no)
   (-> natural? void)
   ; Add the given index to the list of indexes to stop
   ; at the next main loop iteration start.
+  (printf "Told to stop track ~a\n" track-no)
+  (when (not (< track-no (length rs-main-tracks-running)))
+    (printf "Num tracks running is not long enough (~a)\n" (length rs-main-tracks-running)))
   (when (< track-no (length rs-main-tracks-running))
-    (when (not (member track-no rs-main-tracks-running))
-      (cons track-no rs-main-tracks-stopping))))
+    (when (not (member track-no rs-main-tracks-stopping))
+      (set! rs-main-tracks-stopping (cons track-no rs-main-tracks-stopping)))))
 
 
+(define/contract (rs-queue-track! track)
+  (-> rs-t? void)
+  ; Add the given track to the list of tracks to enqueue.
+  (set! rs-main-tracks-queued (cons track rs-main-tracks-queued)))
 
 ; Void
 (define (rs-start-main-loop!)
@@ -93,11 +104,15 @@
          (lambda ()
            (let loop ()
 
+             ; TODO stopping does nothing (see test)
+             
              ; Remove tracks that need to be stopped.
              (start-atomic)
+             (printf "Stopping tracks: ~a\n" rs-main-tracks-stopping)
              (for ([track-index rs-main-tracks-stopping])
                (let ((track-to-stop (list-ref rs-main-tracks-running track-index)))
-                 (remove track-to-stop rs-main-tracks-running)
+                 (set! rs-main-tracks-running (remove track-to-stop rs-main-tracks-running))
+                 (printf "Telling track to stop: ~a\n" track-to-stop)
                  (thread-send track-to-stop 'stop)))
              (set! rs-main-tracks-stopping '())
              (end-atomic)
@@ -106,12 +121,14 @@
              ; new track queue needs to be empty when this is done. (I
              ; think).
              (start-atomic)
+             (printf "Starting tracks: ~a\n" rs-main-tracks-queued)
              (for ([track rs-main-tracks-queued])
                (let ((track-thread (rs-t-play! track)))
-                 (append rs-main-tracks-running (list track-thread))))
+                 (set! rs-main-tracks-running
+                       (append rs-main-tracks-running (list track-thread)))))
              (set! rs-main-tracks-queued '())
              (end-atomic)
-
+             (printf "Running tracks is now: ~a\n" rs-main-tracks-running)
              (sleep rs-main-loop-time-in-secs)
              (displayln "Looping")
              (loop))
@@ -119,7 +136,41 @@
 
 ; Void
 (define (rs-stop-main-loop!)
-  ; Stops the main loop
+  ; Stops the main loop and all running tracks.
+  (for ([track-thread rs-main-tracks-running])
+    (thread-send track-thread 'stop))
+  (set! rs-main-tracks-running '())
   (kill-thread rs-main-loop))
 
 
+(module+ test
+
+  (define (rs-test)
+    (let* ([event1
+            (rs-e-create
+             #:fn (lambda (step-time)
+                    (printf "Event 1 with step time ~a\n" step-time)))]
+           [event2
+            (rs-e-create
+             #:fn (lambda (step-time)
+                    (printf "Event 2 with step time ~a\n" step-time)))]
+           [sequence1
+            (list '() event1 '() event1 '())]
+           [sequence2
+            (list '() event2 '() event2 '() event2)]
+           [track1
+            (rs-t-create #:bpm 196 #:seq sequence1)]
+           [track2
+            (rs-t-create #:bpm 196 #:seq sequence2)])
+      (rs-start-main-loop!)
+      (rs-queue-track! track1)
+      (sleep 4)
+      (rs-queue-track! track2)
+      (sleep 4)
+      (rs-stop-track! 1)
+      (sleep 4)
+      (rs-stop-main-loop!)
+
+      ))
+  (rs-test)
+  )
