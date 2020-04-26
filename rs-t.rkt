@@ -21,8 +21,6 @@
                      #:num-divs [num-divs 16]
                      #:div-length [div-length 1/4]
                      #:seq [seq '()])
-  ; TODO this contract does not seem to be working. Might be because
-  ; we're not testing across module boundaries.
   (->* (#:bpm positive?)
       (#:num-divs positive?
        #:div-length positive?
