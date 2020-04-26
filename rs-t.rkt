@@ -25,7 +25,7 @@
       (#:num-divs positive?
        #:div-length positive?
        #:seq list?)
-      any)
+      rs-t?)
   (rs-t bpm num-divs div-length seq))
 
 (define/contract (rs-t-get-loop-length-ms track)
@@ -73,6 +73,7 @@
          [ 'stop
            (void)]
          [ #f (loop)])))))
+
       
 (module+ test
     (define (rs-t-test)
