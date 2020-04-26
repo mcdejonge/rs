@@ -19,7 +19,11 @@
 
 (define rs-main-div-length 1/4)
 
-(define rs-tracks '())
+(define rs-tracks-running '())
+
+(define rs-tracks-queued '()) ; These tracks will start at the next loop start.
+
+(define rs-tracks-stopping '()) ; These tracks will stop at the next loop start
 
 ; Helper timevalues for use in sleep
 

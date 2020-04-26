@@ -2,9 +2,10 @@
 
 ;; Code for dealing with tracks.
 
-(require "rs-util.rkt")
+(require "rs-util.rkt"
+         "rs-e.rkt")
 
-(provide rs-t
+(provide (struct-out rs-t)
          rs-t-create
          rs-t-play
          rs-t-play-seq)
@@ -50,8 +51,9 @@
   ; Each event gets the step length as a parameter. Step length is in seconds.
   (let ((seq-item-length-s (/ (/ length-in-ms (length seq)) 1000)))
     (for ([seq-item seq])
-      (when (procedure? seq-item) (thread (lambda ()
-                                            (seq-item seq-item-length-s))))
+      (when (rs-e? seq-item)
+        (when (procedure? (rs-e-fn seq-item))
+          (thread (lambda () ((rs-e-fn seq-item) seq-item-length-s)))))
       (sleep seq-item-length-s))))
 
 
@@ -74,27 +76,30 @@
            (void)]
          [ #f (loop)])))))
 
-      
+     
 (module+ test
-    (define (rs-t-test)
-      (let* ([event1
-              (lambda (step-time)
-                (printf "Event 1 is called with step time ~a\n" step-time))]
-             [event2
-              (lambda (step-time)
-                (printf "Event 2 is called with step time ~a\n" step-time))]
-             [sequence1
-              (list '() event1 '() event1 '())]
-             [sequence2
-              (list '() event2 '() event2 '() event2)]
-             [track
-              (rs-t-create #:bpm 128 #:seq sequence1)])
-        (define track-thread (rs-t-play track))
-        (sleep 4)
-        (set-rs-t-seq! track sequence2)
+  (define (rs-t-test)
+    (let* ([event1
+            (rs-e-create
+             #:fn (lambda (step-time)
+                    (printf "Event 1 is called with step time ~a\n" step-time)))]
+           [event2
+            (rs-e-create
+             #:fn (lambda (step-time)
+                    (printf "Event 2 is called with step time ~a\n" step-time))
+             #:offset 1/4)]
+           [sequence1
+            (list '() event1 '() event1 '())]
+           [sequence2
+            (list '() event2 '() event2 '() event2)]
+           [track
+            (rs-t-create #:bpm 128 #:seq sequence1)])
+      (define track-thread (rs-t-play track))
+      (sleep 4)
+      (set-rs-t-seq! track sequence2)
 
-        (sleep 4)
-        (thread-send track-thread
-                     'stop)))
+      (sleep 4)
+      (thread-send track-thread
+                   'stop)))
   (rs-t-test)
   )

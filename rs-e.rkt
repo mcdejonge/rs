@@ -4,7 +4,7 @@
 
 (require "rs-util.rkt")
 
-(provide rs-e
+(provide (struct-out rs-e)
          rs-e-create)
 
 (struct rs-e (fn offset) #:mutable #:transparent) ; TODO lookup if transparency has drawbacks.
@@ -22,7 +22,7 @@
 (define/contract (rs-e-create #:fn fn #:offset [offset 0])
   ; Create an event struct with a function to run (or null) and an
   ; optional offset (between -1 and +1)
-  (->* (#:fn procedure-or-null?
-        #:offset offset-valid?)
+  (->* (#:fn procedure-or-null?)
+        (#:offset offset-valid?)
        rs-e?)
   (rs-e fn offset))
