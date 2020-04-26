@@ -17,7 +17,7 @@
   #:mutable #:transparent) ; TODO lookup if transparency has drawbacks.
 
 ; Int, int, positive -> rs-t
-(define (rs-t-create #:bpm bpm
+(define/contract (rs-t-create #:bpm bpm
                      #:num-divs [num-divs 16]
                      #:div-length [div-length 1/4]
                      #:seq [seq '()])
@@ -30,22 +30,24 @@
       any)
   (rs-t bpm num-divs div-length seq))
 
-(define (rs-t-get-loop-length-ms track)
+(define/contract (rs-t-get-loop-length-ms track)
   ; Return the track loop length in ms)
   (-> rs-t? real?)
   (* (rs-calculate-div-length-ms (rs-t-bpm track)
                                       (rs-t-div-length track))
      (rs-t-num-divs track)))
 
-(define (rs-t-play-single-loop track)
+(define/contract (rs-t-play-single-loop track)
   ; Play a single iteration of the current seq for the track.
   ; TODO all these calculations should be optimized so they're only done
   ; when the track changes.
   (-> rs-t? void)
   (rs-t-play-seq #:length-in-ms (rs-t-get-loop-length-ms track) #:seq (rs-t-seq track)))
 
-(define (rs-t-play-seq #:length-in-ms length-in-ms #:seq seq)
-  (-> positive? list?)
+(define/contract (rs-t-play-seq #:length-in-ms length-in-ms #:seq seq)
+  (->* (#:length-in-ms positive?
+        #:seq list?)
+       void)
   ; Space the items in the seq evenly among the available time and call them.
   ; Each event gets the step length as a parameter. Step length is in seconds.
   (let ((seq-item-length-s (/ (/ length-in-ms (length seq)) 1000)))
