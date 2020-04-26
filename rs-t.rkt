@@ -47,18 +47,12 @@
 (define (rs-t-play-seq #:length-in-ms length-in-ms #:seq seq)
   (-> positive? list?)
   ; Space the items in the seq evenly among the available time and call them.
+  ; Each event gets the step length as a parameter. Step length is in seconds.
   (let ((seq-item-length-s (/ (/ length-in-ms (length seq)) 1000)))
     (for ([seq-item seq])
-      (when (procedure? seq-item) (thread seq-item))
+      (when (procedure? seq-item) (thread (lambda ()
+                                            (seq-item seq-item-length-s))))
       (sleep seq-item-length-s))))
-
-(define (rs-t-test)
-  (let* ([event
-          (lambda()
-                  (printf "Event is called\n"))]
-         [track
-          (rs-t-create #:bpm 128 #:seq (list '() event '() event event '()))])
-    (rs-t-play track)))
 
 
 (define (rs-t-play track)
@@ -69,6 +63,10 @@
      (let loop()
        (rs-t-play-single-loop track)
        (match (thread-try-receive)
+         ; If all you want to do is change the sequence, you do not
+         ; need to send a new track as the new sequence is picked up
+         ; automatically. You only need this if you want to replace
+         ; the currently running track with another.
          [(? rs-t? new-track-info)
           (set! track new-track-info)
           (loop)]
@@ -76,3 +74,26 @@
            (void)]
          [ #f (loop)])))))
       
+(module+ test
+    (define (rs-t-test)
+      (let* ([event1
+              (lambda (step-time)
+                (printf "Event 1 is called with step time ~a\n" step-time))]
+             [event2
+              (lambda (step-time)
+                (printf "Event 2 is called with step time ~a\n" step-time))]
+             [sequence1
+              (list '() event1 '() event1 '())]
+             [sequence2
+              (list '() event2 '() event2 '() event2)]
+             [track
+              (rs-t-create #:bpm 128 #:seq sequence1)])
+        (define track-thread (rs-t-play track))
+        (sleep 4)
+        (set-rs-t-seq! track sequence2)
+
+        (sleep 4)
+        (thread-send track-thread
+                     'stop)))
+  (rs-t-test)
+  )
