@@ -7,8 +7,8 @@
 
 (provide (struct-out rs-t)
          rs-t-create
-         rs-t-play
-         rs-t-play-seq)
+         rs-t-play!
+         rs-t-play-seq!)
 
 
 (struct rs-t (bpm
@@ -36,19 +36,22 @@
                                       (rs-t-div-length track))
      (rs-t-num-divs track)))
 
-(define/contract (rs-t-play-single-loop track)
+(define/contract (rs-t-play-single-loop! track)
   ; Play a single iteration of the current seq for the track.
   ; TODO all these calculations should be optimized so they're only done
   ; when the track changes.
   (-> rs-t? void)
-  (rs-t-play-seq #:length-in-ms (rs-t-get-loop-length-ms track) #:seq (rs-t-seq track)))
+  (rs-t-play-seq! #:length-in-ms (rs-t-get-loop-length-ms track) #:seq (rs-t-seq track)))
 
-(define/contract (rs-t-play-seq #:length-in-ms length-in-ms #:seq seq)
+(define/contract (rs-t-play-seq! #:length-in-ms length-in-ms #:seq seq)
   (->* (#:length-in-ms positive?
         #:seq list?)
        void)
   ; Space the items in the seq evenly among the available time and call them.
   ; Each event gets the step length as a parameter. Step length is in seconds.
+
+  ; TODO deal with offsets
+  
   (let ((seq-item-length-s (/ (/ length-in-ms (length seq)) 1000)))
     (for ([seq-item seq])
       (when (rs-e? seq-item)
@@ -57,13 +60,13 @@
       (sleep seq-item-length-s))))
 
 
-(define (rs-t-play track)
+(define (rs-t-play! track)
   (-> rs-t? thread?)
   ; Return a thread that plays continuously until it receives a 'stop message.
   (thread
    (lambda ()
      (let loop()
-       (rs-t-play-single-loop track)
+       (rs-t-play-single-loop! track)
        (match (thread-try-receive)
          ; If all you want to do is change the sequence, you do not
          ; need to send a new track as the new sequence is picked up
@@ -94,7 +97,7 @@
             (list '() event2 '() event2 '() event2)]
            [track
             (rs-t-create #:bpm 128 #:seq sequence1)])
-      (define track-thread (rs-t-play track))
+      (define track-thread (rs-t-play! track))
       (sleep 4)
       (set-rs-t-seq! track sequence2)
 
