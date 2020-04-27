@@ -101,8 +101,6 @@
          (lambda ()
            (let loop ()
 
-             ; TODO stopping does nothing (see test)
-             
              ; Remove tracks that need to be stopped.
              (start-atomic)
              (for ([track-index rs-main-tracks-stopping])

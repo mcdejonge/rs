@@ -15,7 +15,7 @@
               num-divs
               div-length
               seq)
-  #:mutable #:transparent) ; TODO lookup if transparency has drawbacks.
+  #:mutable #:transparent) 
 
 ; Int, int, positive -> rs-t
 (define/contract (rs-t-create #:bpm bpm

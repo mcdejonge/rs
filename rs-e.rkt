@@ -7,9 +7,11 @@
 (provide (struct-out rs-e)
          rs-e-create)
 
-(struct rs-e (fn offset) #:mutable #:transparent) ; TODO lookup if transparency has drawbacks.
+(struct rs-e (fn offset) #:mutable #:transparent)
 
-; There is probably another way to check if something is null of a procedure in a contract but I couldn't (quickly) figure out how. So use a helper function.
+; There is probably another way to check if something is null or a
+; procedure in a contract but I couldn't (quickly) figure out how. So
+; use a helper function.
 (define (procedure-or-null? input)
   (or (procedure? input) (null? input)))
 
