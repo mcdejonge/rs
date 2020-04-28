@@ -2,9 +2,11 @@
 
 ;; This module contains functions for sending MIDI notes to instruments.
 
-(require "rs-midi-core.rkt")
+(require "rs-midi-core.rkt"
+         "rs-e.rkt")
 
 (provide
+ rs-m-event-play
  rs-m-list-ports
  rs-m-instr
  rs-m-play
@@ -59,6 +61,23 @@
         [else (printf "Invalid arguments supplied to rs-m-play: ~a ~a ~a ~a\n"
                       instr note note-length-ms velocity)]))
 
+(define (rs-m-event-play instr note note-length-ms [velocity 127] #:offset [offset 0])
+  ; Create an rs-e structure that can be used in a sequence.
+  (cond [(and (rs-m-instr-struct? instr)
+              (integer? note)
+              (natural? note-length-ms)
+              (> note-length-ms 0)
+              (natural? velocity)
+              (> velocity -1)
+              (< velocity 128)
+              (and (real? offset)
+                   (> offset -1)
+                   (< offset 1)))
+         (rs-e-create (lambda (step-time)
+                        (rs-m-play instr note note-length-ms velocity)))]
+        [else (printf "Invalid arguments supplied to rs-m-event-play: ~a ~a ~a ~a offset ~`\n"
+                      instr note note-length-ms velocity offset)]))
+
 ; TODO add an event for setting CC values.
 
 (module+ test
@@ -75,7 +94,7 @@ EOF
 
   
   (displayln test-info)
-  (printf "Available ports:\n~s" (rs-m-list-ports))
+  (printf "Available ports:\n~s\n" (rs-m-list-ports))
 
   (cond [(> (length (rs-m-list-ports)) 0)
          
@@ -90,6 +109,7 @@ EOF
          ]
   [else (displayln "No MIDI ports are available for testing.")])
 
+  ;; No test for rs-m-event-play as that would require bringing in too much extra stuff. Check the demo.
 
   
   )
