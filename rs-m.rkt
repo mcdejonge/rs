@@ -6,9 +6,11 @@
          "rs-e.rkt")
 
 (provide
+ rs-m-event-cc
  rs-m-event-play
  rs-m-list-ports
  rs-m-instr
+ rs-m-cc
  rs-m-play
  )
 
@@ -32,6 +34,13 @@
         [(natural? name-or-num) (< name-or-num (length (rs-m-list-ports)))]
         [else #f]))
 
+(define (rs-m-valid-midi-value? input)
+  ; Helper function that checks if the supplied input is a valid MIDI
+  ; value (integer between 0 and 127).
+  (and (natural? input)
+       (> input -1)
+       (< input 128)))
+
 (define (rs-m-valid-midi-channel? channel)
   (and (natural? channel)
        (> channel 0)
@@ -49,36 +58,55 @@
 
 
 (define (rs-m-play instr note note-length-ms [velocity 127])
+  ; Play a MIDI note using the supplied instrument.
   (cond [(and (rs-m-instr-struct? instr)
-              (integer? note)
+              (rs-m-valid-midi-value? note)
               (natural? note-length-ms)
               (> note-length-ms 0)
-              (natural? velocity)
-              (> velocity -1)
-              (< velocity 128))
+              (rs-m-valid-midi-value? velocity))
          (instr (lambda (channel)
                   (rs-midi-core-send-note! note note-length-ms velocity channel)))]
         [else (printf "Invalid arguments supplied to rs-m-play: ~a ~a ~a ~a\n"
                       instr note note-length-ms velocity)]))
 
 (define (rs-m-event-play instr note note-length-ms [velocity 127] #:offset [offset 0])
-  ; Create an rs-e structure that can be used in a sequence.
+  ; Create an rs-e structure that can be used in a sequence for
+  ; playing a MIDI note using the supplied instrument.
   (cond [(and (rs-m-instr-struct? instr)
-              (integer? note)
+              (rs-m-valid-midi-value? note)
               (natural? note-length-ms)
               (> note-length-ms 0)
-              (natural? velocity)
-              (> velocity -1)
-              (< velocity 128)
+              (rs-m-valid-midi-value? velocity)
               (and (real? offset)
                    (> offset -1)
                    (< offset 1)))
          (rs-e-create #:fn (lambda (step-time)
                         (rs-m-play instr note note-length-ms velocity)))]
-        [else (printf "Invalid arguments supplied to rs-m-event-play: ~a ~a ~a ~a offset ~`\n"
+        [else (printf "Invalid arguments supplied to rs-m-event-play: ~a ~a ~a ~a offset ~a\n"
                       instr note note-length-ms velocity offset)]))
 
-; TODO add an event for setting CC values.
+(define (rs-m-cc instr cc-no cc-val)
+  (cond [(and (rs-m-instr-struct? instr)
+              (rs-m-valid-midi-value? cc-no)
+              (rs-m-valid-midi-value? cc-val))
+         (instr (lambda (channel)
+                  (rs-midi-core-send-cc! cc-no cc-val channel)))]
+        [else (printf "Invalid arguments supplied to rs-m-cc: ~a ~a ~a" instr cc-no cc-val)]))
+
+(define (rs-m-event-cc instr cc-no cc-val #:offset [offset 0])
+  ; Create an rs-e structure that can be used in a sequence for
+  ; sending a MIDI cc message using the supplied instrument.
+  (cond [(and (rs-m-instr-struct? instr)
+              (rs-m-valid-midi-value? cc-no)
+              (rs-m-valid-midi-value? cc-val)
+              (and (real? offset)
+                   (> offset -1)
+                   (< offset 1)))
+         (rs-e-create #:fn (lambda (step-time)
+                        (rs-m-cc instr cc-no cc-val)))]
+        [else (printf "Invalid arguments supplied to rs-m-event-cc: ~a ~a ~a offset ~a\n"
+                      instr cc-no cc-val offset)]))
+
 
 (module+ test
   (define test-info #<<EOF
@@ -109,7 +137,11 @@ EOF
          ]
   [else (displayln "No MIDI ports are available for testing.")])
 
-  ;; No test for rs-m-event-play as that would require bringing in too much extra stuff. Check the demo.
+  ;; No test for rs-m-event-play as that would require bringing in too
+  ;; much extra stuff. Check the demo.
+
+  ;; No test for rs-m-cc and rs-m-event-cc as they require too much setting up.
+  ;; Run rs-tool-cc.rkt if you want to assign cc messages.
 
   
   )

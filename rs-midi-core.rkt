@@ -14,6 +14,7 @@
          rs-midi-core-close-output!
          rs-midi-core-list-ports
          rs-midi-core-print-port-list
+         rs-midi-core-send-cc!
          rs-midi-core-send-note!)
 
 
@@ -116,7 +117,6 @@
   (->* (midi-value? midi-value?)
        (midi-channel-number?)
        thread?)
-  (printf "~s\n" (list (+ channel 175) cc-no cc-val) )
   (thread (lambda()
             (rtmidi-send-message out (list (+ channel 175) cc-no cc-val)))))
   
