@@ -128,25 +128,30 @@
          (lambda ()
            (let loop ()
 
-             ; Remove tracks that need to be stopped.
-             (start-atomic)
-             (for ([track-index rs-main-tracks-stopping])
-               (let ((track-to-stop (list-ref rs-main-tracks-running track-index)))
-                 (set! rs-main-tracks-running (remove track-to-stop rs-main-tracks-running))
-                 (thread-send track-to-stop 'stop)))
-             (set! rs-main-tracks-stopping '())
-             (end-atomic)
+             (thread
+              (lambda ()
+                ; Remove tracks that need to be stopped.
+                (start-atomic)
+                (for ([track-index rs-main-tracks-stopping])
+                  (let ((track-to-stop (list-ref rs-main-tracks-running track-index)))
+                    (set! rs-main-tracks-running (remove track-to-stop rs-main-tracks-running))
+                    (thread-send track-to-stop 'stop)))
+                (set! rs-main-tracks-stopping '())
+                (end-atomic)))
 
              ; Start new tracks as needed.  This is atomic because the
              ; new track queue needs to be empty when this is done. (I
              ; think).
-             (start-atomic)
-             (for ([track rs-main-tracks-queued])
-               (let ((track-thread (rs-t-play! track)))
-                 (set! rs-main-tracks-running
-                       (append rs-main-tracks-running (list track-thread)))))
-             (set! rs-main-tracks-queued '())
-             (end-atomic)
+             (thread
+              (lambda()
+                (start-atomic)
+                (for ([track rs-main-tracks-queued])
+                  (let ((track-thread (rs-t-play! track)))
+                    (set! rs-main-tracks-running
+                          (append rs-main-tracks-running (list track-thread)))))
+                (set! rs-main-tracks-queued '())
+                (end-atomic)
+                ))
              (sleep rs-main-loop-time-in-secs)
              (loop))))))
 
