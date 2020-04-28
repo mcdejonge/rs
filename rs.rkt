@@ -8,6 +8,7 @@
 
 (provide
 
+ rs-queue-track!
  rs-set-global-bpm!
  rs-set-global-div-length!
  rs-set-global-num-divs!
