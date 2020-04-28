@@ -7,12 +7,26 @@
 (collect-garbage 'incremental)
 
 (provide
+
  rs-set-global-bpm!
  rs-set-global-div-length!
  rs-set-global-num-divs!
  rs-stop-track!
  rs-start-main-loop!
  rs-stop-main-loop!
+
+ ; From included files (so you only need to require rs.rkt)
+ 
+ ; From rs-e.rkt
+ (struct-out rs-e)
+ rs-e-create
+
+ ; From rs-t.rkt
+ (struct-out rs-t)
+ rs-t-create
+ rs-t-play!
+ rs-t-play-seq!
+
  )
 
 (require
