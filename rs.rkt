@@ -111,7 +111,7 @@
 
 (define (rs-track sequence)
   ; Create a new track that uses the main settings for BPM and divisions.
-  ; TODO validate the sequence
+  (-> rs-t-valid-sequence? rs-t?)
   (rs-t-create #:bpm rs-main-bpm
                #:num-divs rs-main-num-divs
                #:div-length rs-main-div-length

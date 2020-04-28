@@ -18,17 +18,25 @@
               seq)
   #:mutable #:transparent) 
 
+(define (rs-t-valid-sequence? input)
+  ; Utility function that validates a sequence. This is provided to
+  ; modules calling this module.
+  (and (list? input)
+       (event-or-null? (car input))
+       (or (null? (cdr input))
+           (rs-t-valid-sequence? (cdr input)))))
+
+
 ; Int, int, positive -> rs-t
 (define/contract (rs-t-create #:bpm bpm
                      #:num-divs [num-divs 16]
                      #:div-length [div-length 1/4]
                      #:seq [seq '()])
   ; Create a new track.
-  ; TODO validate the sequence.
   (->* (#:bpm positive?)
       (#:num-divs positive?
        #:div-length positive?
-       #:seq list?)
+       #:seq rs-t-valid-sequence?)
       rs-t?)
   (rs-t bpm num-divs div-length seq))
 
@@ -49,14 +57,6 @@
 (define (event-or-null? input)
   ; Check if something is an event (see rs-e) or null.
   (or (rs-e? input) (null? input)))
-
-(define (rs-t-valid-sequence? input)
-  ; Utility function that validates a sequence. This is provided to
-  ; modules calling this module.
-  (and (list? input)
-       (event-or-null? (car input))
-       (or (null? (cdr input))
-           (rs-t-valid-sequence? (cdr input)))))
 
 (define/contract (rs-t-play-seq! #:length-in-ms length-in-ms #:seq seq)
   (->* (#:length-in-ms positive?
