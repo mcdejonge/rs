@@ -12,6 +12,7 @@
 
 (provide rs-midi-core-open-out-port!
          rs-midi-core-close-output!
+         rs-midi-core-list-ports
          rs-midi-core-print-port-list
          rs-midi-core-send-note!)
 
@@ -37,6 +38,10 @@
 
 
 ; List input and output ports
+
+(define (rs-midi-core-list-ports)
+  ; Return a list of available ports.
+  out-ports)
 
 ; Void
 (define (rs-midi-core-print-port-list)
