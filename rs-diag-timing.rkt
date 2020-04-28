@@ -25,7 +25,7 @@
 ;; names. This ! means the function will cause something to happen to
 ;; the main loop.
 (rs-set-global-bpm! 128)
-(rs-set-global-div-length! 1/4)
+(rs-set-global-div-length! 1/8)
 (rs-set-global-num-divs! 16)
 
 (rs-start-main-loop!)

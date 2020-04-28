@@ -57,21 +57,11 @@
 ; Contains a list of indexes
 (define rs-main-tracks-stopping '())
 
-; Helper time values for use in sleep
-
-(define rs-main-div-length-ms 0.0)
-
-(define rs-main-div-time-in-secs 0.0)
-
 (define rs-main-loop-time-in-secs 0.0)
 
-(define (rs-main-recalculate-time-values!)
-  (set! rs-main-div-length-ms
-        (rs-calculate-div-length-ms rs-main-bpm rs-main-div-length))
-  (set! rs-main-div-time-in-secs
-        (/ rs-main-div-length-ms 1000))
+(define (rs-main-recalculate-loop-length!)
   (set! rs-main-loop-time-in-secs
-    (* rs-main-num-divs rs-main-div-time-in-secs)))
+        (/ 60.0 rs-main-bpm)))
 
 ;; TODO contracts may seem nice, but they cause the program to stop,
 ;; which is not what you want in a sequencer. For public functions
@@ -79,21 +69,19 @@
 ;; continue.
 
 (define/contract (rs-set-global-num-divs! num-divs)
-  (-> positive? void)
+  (-> natural? void)
   ; Set the global number of divs.
-  (set! rs-main-num-divs num-divs)
-  (rs-main-recalculate-time-values!))
+  (set! rs-main-num-divs num-divs))
 
 (define/contract (rs-set-global-bpm! bpm)
-  (-> positive? void)
+  (-> natural? void)
   ; Set the global BPM.
   (set! rs-main-bpm bpm)
-  (rs-main-recalculate-time-values!))
+  (rs-main-recalculate-loop-length!))
 
 (define/contract (rs-set-global-div-length! div-length)
   (-> positive? void)
-  (set! rs-main-div-length div-length)
-  (rs-main-recalculate-time-values!))
+  (set! rs-main-div-length div-length))
 
 
 (define/contract (rs-queue-track! track)
@@ -122,7 +110,6 @@
 ; Void
 (define (rs-start-main-loop!)
   ; Starts the main loop.
-  (rs-main-recalculate-time-values!)
   (set! rs-main-loop
         (thread
          (lambda ()
