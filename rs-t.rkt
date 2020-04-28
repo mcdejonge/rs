@@ -8,7 +8,6 @@
 (provide (struct-out rs-t)
          rs-t-create
          rs-t-play!
-         rs-t-play-seq!
          rs-t-valid-sequence?)
 
 
@@ -40,39 +39,23 @@
       rs-t?)
   (rs-t bpm num-divs div-length seq))
 
-(define/contract (rs-t-get-loop-length-ms track)
-  ; Return the track loop length in ms)
-  (-> rs-t? real?)
-  (* (rs-calculate-div-length-ms (rs-t-bpm track)
-                                      (rs-t-div-length track))
-     (rs-t-num-divs track)))
-
 (define/contract (rs-t-play-single-loop! track)
   ; Play a single iteration of the current seq for the track.
-  ; TODO all these calculations should be optimized so they're only done
-  ; when the track changes.
+  ; TODO deal with offsets
   (-> rs-t? void)
-  (rs-t-play-seq! #:length-in-ms (rs-t-get-loop-length-ms track) #:seq (rs-t-seq track)))
+  (let* ([beat-length (/ 60.0 (rs-t-bpm track))]
+         [div-length (* beat-length (rs-t-div-length track))])
+    ;; (printf "Beat length is ~s div length is ~s (because there are ~s divs)\n"
+    ;;         beat-length div-length (rs-t-div-length track))
+    (for ([seq-item (rs-t-seq track)])
+      (when (rs-e? seq-item)
+        (when (procedure? (rs-e-fn seq-item))
+          (thread (lambda () ((rs-e-fn seq-item) div-length)))))
+      (sleep div-length))))
 
 (define (event-or-null? input)
   ; Check if something is an event (see rs-e) or null.
   (or (rs-e? input) (null? input)))
-
-(define/contract (rs-t-play-seq! #:length-in-ms length-in-ms #:seq seq)
-  (->* (#:length-in-ms positive?
-        #:seq rs-t-valid-sequence?)
-       void)
-  ; Space the items in the seq evenly among the available time and call them.
-  ; Each event gets the step length as a parameter. Step length is in seconds.
-
-  ; TODO deal with offsets
-  
-  (let ((seq-item-length-s (/ (/ length-in-ms (length seq)) 1000)))
-    (for ([seq-item seq])
-      (when (rs-e? seq-item)
-        (when (procedure? (rs-e-fn seq-item))
-          (thread (lambda () ((rs-e-fn seq-item) seq-item-length-s)))))
-      (sleep seq-item-length-s))))
 
 
 (define (rs-t-play! track)
