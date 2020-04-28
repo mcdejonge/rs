@@ -15,6 +15,8 @@
  rs-start-main-loop!
  rs-stop-main-loop!
 
+ rs-track
+
  ; From included files (so you only need to require rs.rkt)
  
  ; From rs-e.rkt
@@ -92,6 +94,12 @@
   (set! rs-main-div-length div-length)
   (rs-main-recalculate-time-values!))
 
+
+(define/contract (rs-queue-track! track)
+  (-> rs-t? void)
+  ; Add the given track to the list of tracks to enqueue.
+  (set! rs-main-tracks-queued (cons track rs-main-tracks-queued)))
+
 (define/contract (rs-stop-track! track-no)
   (-> natural? void)
   ; Add the given index to the list of indexes to stop
@@ -101,10 +109,14 @@
       (set! rs-main-tracks-stopping (cons track-no rs-main-tracks-stopping)))))
 
 
-(define/contract (rs-queue-track! track)
-  (-> rs-t? void)
-  ; Add the given track to the list of tracks to enqueue.
-  (set! rs-main-tracks-queued (cons track rs-main-tracks-queued)))
+(define (rs-track sequence)
+  ; Create a new track that uses the main settings for BPM and divisions.
+  ; TODO validate the sequence
+  (rs-t-create #:bpm rs-main-bpm
+               #:num-divs rs-main-num-divs
+               #:div-length rs-main-div-length
+               #:seq sequence))
+
 
 ; Void
 (define (rs-start-main-loop!)
@@ -145,7 +157,6 @@
   (set! rs-main-tracks-running '())
   (kill-thread rs-main-loop))
 
-
 (module+ test
 
   (define (rs-test)
@@ -162,8 +173,7 @@
             (list '() event1 '() event1 '())]
            [sequence2
             (list '() event2 '() event2 '() event2)]
-           [track1
-            (rs-t-create #:bpm 196 #:seq sequence1)]
+           [track1 (rs-track sequence1)]
            [track2
             (rs-t-create #:bpm 196 #:seq sequence2)])
       (rs-start-main-loop!)

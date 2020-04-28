@@ -73,7 +73,7 @@
               (and (real? offset)
                    (> offset -1)
                    (< offset 1)))
-         (rs-e-create (lambda (step-time)
+         (rs-e-create #:fn (lambda (step-time)
                         (rs-m-play instr note note-length-ms velocity)))]
         [else (printf "Invalid arguments supplied to rs-m-event-play: ~a ~a ~a ~a offset ~`\n"
                       instr note note-length-ms velocity offset)]))

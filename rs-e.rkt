@@ -11,7 +11,7 @@
 
 ; There is probably another way to check if something is null or a
 ; procedure in a contract but I couldn't (quickly) figure out how. So
-; use a helper function.
+; use a helper function. TODO extract this sort of stuff into an util file.
 (define (procedure-or-null? input)
   ; Check if something is a procedure or null.
   (or (procedure? input) (null? input)))

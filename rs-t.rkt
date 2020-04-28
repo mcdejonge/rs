@@ -8,7 +8,8 @@
 (provide (struct-out rs-t)
          rs-t-create
          rs-t-play!
-         rs-t-play-seq!)
+         rs-t-play-seq!
+         rs-t-valid-sequence?)
 
 
 (struct rs-t (bpm
@@ -22,6 +23,8 @@
                      #:num-divs [num-divs 16]
                      #:div-length [div-length 1/4]
                      #:seq [seq '()])
+  ; Create a new track.
+  ; TODO validate the sequence.
   (->* (#:bpm positive?)
       (#:num-divs positive?
        #:div-length positive?
@@ -43,9 +46,21 @@
   (-> rs-t? void)
   (rs-t-play-seq! #:length-in-ms (rs-t-get-loop-length-ms track) #:seq (rs-t-seq track)))
 
+(define (event-or-null? input)
+  ; Check if something is an event (see rs-e) or null.
+  (or (rs-e? input) (null? input)))
+
+(define (rs-t-valid-sequence? input)
+  ; Utility function that validates a sequence. This is provided to
+  ; modules calling this module.
+  (and (list? input)
+       (event-or-null? (car input))
+       (or (null? (cdr input))
+           (rs-t-valid-sequence? (cdr input)))))
+
 (define/contract (rs-t-play-seq! #:length-in-ms length-in-ms #:seq seq)
   (->* (#:length-in-ms positive?
-        #:seq list?)
+        #:seq rs-t-valid-sequence?)
        void)
   ; Space the items in the seq evenly among the available time and call them.
   ; Each event gets the step length as a parameter. Step length is in seconds.
