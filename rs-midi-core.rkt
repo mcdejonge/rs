@@ -87,7 +87,7 @@
     [else (error "No such MIDI port: " index)]))
 
 ; Helper functions for the rs-midi-core-send-note! contract.
-(define (midi-velocity-value? input)
+(define (midi-value? input)
   (and (natural? input)
        (> input 0)
        (< input 128)))
@@ -99,8 +99,8 @@
 
 ; Int, Natural, Int (0-127), Int (1-16) -> Thread
 (define/contract (rs-midi-core-send-note! pitch duration-ms [velocity 127] [channel 1])
-  (->* (integer? natural?)
-      (midi-velocity-value? midi-channel-number?) thread?)
+  (->* (midi-value? natural?)
+      (midi-value? midi-channel-number?) thread?)
   ; Send a note to the currently open port (if any) on the given
   ; channel for the given duration.
   (thread (lambda()
@@ -110,6 +110,16 @@
 
 ;; TODO figure out how to send MIDI cc messages and implement sending them.
 
+(define/contract (rs-midi-core-send-cc! cc-no cc-val [channel 1])
+  ; Send a MIDI CC message.
+  ; TODO create a proper contract.
+  (->* (midi-value? midi-value?)
+       (midi-channel-number?)
+       thread?)
+  (printf "~s\n" (list (+ channel 175) cc-no cc-val) )
+  (thread (lambda()
+            (rtmidi-send-message out (list (+ channel 175) cc-no cc-val)))))
+  
 (module+ test
   (define test-info #<<EOF
 
@@ -132,4 +142,19 @@ EOF
      (sleep 1) ; Necessary because otherwise the port may be closed before the note is played.
      (rs-midi-core-close-output!)]
     [else (displayln "No MIDI port available for testing.")]
-    ))
+    )
+
+  
+  ;; (rs-midi-core-open-out-port! 0)
+  ;; (let loop()
+  ;;   (rs-midi-core-send-cc! 7 100)
+  ;;   (sleep 0.01)
+  ;;   (rs-midi-core-send-note! 60 100)
+  ;;   (sleep 0.1)
+  ;;   (rs-midi-core-send-cc! 7 120)
+  ;;   (rs-midi-core-send-note! 60 100)
+  ;;   (sleep 0.2)
+  ;;   (printf "Sending CC\n")
+  ;;   (loop))
+
+  )
