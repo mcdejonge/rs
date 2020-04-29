@@ -12,7 +12,7 @@
 
 
 (struct rs-t (bpm
-              num-divs
+              steps
               div-length
               seq)
   #:mutable #:transparent) 
@@ -28,16 +28,16 @@
 
 ; Int, int, positive -> rs-t
 (define/contract (rs-t-create #:bpm bpm
-                     #:num-divs [num-divs 16]
+                     #:steps [steps 16]
                      #:div-length [div-length 1/4]
                      #:seq [seq '()])
   ; Create a new track.
   (->* (#:bpm positive?)
-      (#:num-divs positive?
+      (#:steps positive?
        #:div-length positive?
        #:seq rs-t-valid-sequence?)
       rs-t?)
-  (rs-t bpm num-divs div-length seq))
+  (rs-t bpm steps div-length seq))
 
 (define/contract (rs-t-play-single-loop! track)
   ; Play a single iteration of the current seq for the track.

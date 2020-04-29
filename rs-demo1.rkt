@@ -15,7 +15,7 @@
 ;; the main loop.
 (rs-set-global-bpm! 128)
 (rs-set-global-div-length! 1/4)
-(rs-set-global-num-divs! 16)
+(rs-set-global-steps! 16)
 
 (rs-start-main-loop!)
 

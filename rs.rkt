@@ -11,7 +11,7 @@
  rs-queue-track!
  rs-set-global-bpm!
  rs-set-global-div-length!
- rs-set-global-num-divs!
+ rs-set-global-steps!
  rs-stop-track!
  rs-start-main-loop!
  rs-stop-main-loop!
@@ -39,11 +39,24 @@
 
 (define rs-main-loop '())
 
+;; Timing works as follows: you set the BPM, the length of a single
+;; division as a fraction of a single beat and the number of such
+;; divisions that make up a single loop.
+;;
+;; A regular 16 step sequence at 128 BPM would then have the BPM set
+;; at 128 (obviously), the division length to 1/4 (because there are
+;; four steps for every beat) and the number of divisions to 16.
+;;
+;; A 3/4 sequence would have the division length set to 1/4 as well and the number
+; Beats per minute
 (define rs-main-bpm 120)
 
-(define rs-main-num-divs 16)
-
+; Length of a single division that makes up a single loop.
 (define rs-main-div-length 1/4)
+
+; Number of divisions that makes up a loop.
+(define rs-main-steps 16)
+
 
 ; A list of track threads.
 (define rs-main-tracks-running '())
@@ -67,10 +80,10 @@
 ;; just output an error message, refuse to do something stupid and
 ;; continue.
 
-(define/contract (rs-set-global-num-divs! num-divs)
+(define/contract (rs-set-global-steps! steps)
   (-> natural? void)
   ; Set the global number of divs.
-  (set! rs-main-num-divs num-divs))
+  (set! rs-main-steps steps))
 
 (define/contract (rs-set-global-bpm! bpm)
   (-> natural? void)
@@ -101,7 +114,7 @@
   ; Create a new track that uses the main settings for BPM and divisions.
   (-> rs-t-valid-sequence? rs-t?)
   (rs-t-create #:bpm rs-main-bpm
-               #:num-divs rs-main-num-divs
+               #:steps rs-main-steps
                #:div-length rs-main-div-length
                #:seq sequence))
 
