@@ -64,7 +64,7 @@
       (when (rs-e? seq-item)
         (when (procedure? (rs-e-fn seq-item))
           (thread (lambda () ((rs-e-fn seq-item) div-length-ms)))))
-      (rs-util-rtsleep (inexact->exact (round (exact->inexact current-step-length))) 200)
+      (rs-util-rtsleep (inexact->exact (round (exact->inexact current-step-length))) 2)
       (values (+ div-length-ms (- (truncate (current-inexact-milliseconds)) expect-end-at))
               (+ (+ div-length-ms (- (truncate (current-inexact-milliseconds)) expect-end-at))
                  (truncate (current-inexact-milliseconds)
@@ -104,7 +104,10 @@
                  [expect-end-at (+ (current-inexact-milliseconds) loop-length )]
                  [difference 0])
          (collect-garbage 'minor)
-         (rs-t-play-single-loop! track (- (rs-t-calculate-loop-length track) (/ difference 2)))
+         (thread (lambda ()
+                   (rs-t-play-single-loop! track (rs-t-calculate-loop-length track))
+                   ))
+         (rs-util-rtsleep (rs-t-calculate-loop-length track) 2)
          (match (thread-try-receive)
            ; If all you want to do is change the sequence, you do not
            ; need to send a new track as the new sequence is picked up

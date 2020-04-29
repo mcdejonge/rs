@@ -58,26 +58,26 @@
 
 ;; Create tracks for each instrument. They can use the main loop settings for now.
 (define track1 (rs-track i1seq))
-;(define track2 (rs-track i2seq))
-;(define track3 (rs-track i3seq))
+(define track2 (rs-track i2seq))
+(define track3 (rs-track i3seq))
 
 ;; Cue and stop the tracks.
 (rs-queue-track! track1)
-(sleep 8.0)
+(sleep 4.0)
 
-;; (rs-queue-track! track2)
-;; (sleep 4.0)
+(rs-queue-track! track2)
+(sleep 4.0)
 
-;; (rs-queue-track! track3)
-;; (sleep 4.0)
+(rs-queue-track! track3)
+(sleep 16.0)
 
-;; (rs-stop-track! 0)
-;; (sleep 4.0)
+(rs-stop-track! 0)
+(sleep 4.0)
 
-;; (rs-stop-track! 0)
-;; (sleep 4.0)
+(rs-stop-track! 0)
+(sleep 4.0)
 
-;; (rs-stop-track! 0)
+(rs-stop-track! 0)
 
 ;; We're done. Stop the main loop. The performance is over.
 (rs-stop-main-loop!)
