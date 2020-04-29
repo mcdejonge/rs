@@ -36,8 +36,6 @@
        #:div-length positive?
        #:seq rs-t-valid-sequence?)
       rs-t?)
-  (printf "Told to create a track with BPM ~s steps ~s div-length ~s\n"
-          bpm steps div-length)
   (rs-t bpm steps div-length seq))
 
 
@@ -65,10 +63,7 @@
         ([seq-item (rs-t-seq track)])
       (when (rs-e? seq-item)
         (when (procedure? (rs-e-fn seq-item))
-          ;;(printf "I would have played a note\n")))
           (thread (lambda () ((rs-e-fn seq-item) div-length-ms)))))
-      (printf "Performing step of ~s ms expected to end at ~s\n"
-              current-step-length expect-end-at)
       (rs-util-rtsleep (inexact->exact (round (exact->inexact current-step-length))) 200)
       (values (+ div-length-ms (- (truncate (current-inexact-milliseconds)) expect-end-at))
               (+ (+ div-length-ms (- (truncate (current-inexact-milliseconds)) expect-end-at))
@@ -97,10 +92,6 @@
          [real-next-loop-length
           (max min-loop-length (min next-loop-length max-loop-length))]
          [next-loop-end (+ now next-loop-length)])
-    (printf "At ~s : loop length was ~s expected to end at ~s but ended ~s ms later at ~s\n"
-            now prev-loop-length expected-end difference now)
-    (printf "New loop length is ~s expected to end at ~s\n"
-            real-next-loop-length next-loop-end)
     (list real-next-loop-length next-loop-end difference)))
   
 (define (rs-t-play! track)
@@ -113,8 +104,6 @@
                  [expect-end-at (+ (current-inexact-milliseconds) loop-length )]
                  [difference 0])
          (collect-garbage 'minor)
-         (printf "At ~s start playing single loop for ~s expect end at ~s \n"
-                 (current-inexact-milliseconds) next-loop-length expect-end-at)
          (rs-t-play-single-loop! track (- (rs-t-calculate-loop-length track) (/ difference 2)))
          (match (thread-try-receive)
            ; If all you want to do is change the sequence, you do not
