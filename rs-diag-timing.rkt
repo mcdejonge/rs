@@ -24,9 +24,9 @@
 ;; each and start it. Note the ! at the end of these function
 ;; names. This ! means the function will cause something to happen to
 ;; the main loop.
-(rs-set-global-bpm! 128)
+(rs-set-global-bpm! 120)
 (rs-set-global-div-length! 1/4)
-(rs-set-global-steps! 16)
+(rs-set-global-steps! 4)
 
 (rs-start-main-loop!)
 
@@ -58,29 +58,26 @@
 
 ;; Create tracks for each instrument. They can use the main loop settings for now.
 (define track1 (rs-track i1seq))
-(define track2 (rs-track i2seq))
-(define track3 (rs-track i3seq))
+;(define track2 (rs-track i2seq))
+;(define track3 (rs-track i3seq))
 
 ;; Cue and stop the tracks.
 (rs-queue-track! track1)
-(sleep 4.0)
+(sleep 8.0)
 
-(rs-queue-track! track2)
-(sleep 4.0)
+;; (rs-queue-track! track2)
+;; (sleep 4.0)
 
-(rs-queue-track! track3)
-(sleep 4.0)
+;; (rs-queue-track! track3)
+;; (sleep 4.0)
 
-(rs-stop-track! 0)
-(sleep 4.0)
+;; (rs-stop-track! 0)
+;; (sleep 4.0)
 
-(rs-stop-track! 0)
-(sleep 4.0)
+;; (rs-stop-track! 0)
+;; (sleep 4.0)
 
-(rs-stop-track! 0)
+;; (rs-stop-track! 0)
 
 ;; We're done. Stop the main loop. The performance is over.
 (rs-stop-main-loop!)
-
-
-

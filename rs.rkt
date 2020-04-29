@@ -69,11 +69,11 @@
 ; Contains a list of indexes
 (define rs-main-tracks-stopping '())
 
-(define rs-main-loop-time-in-secs 0.0)
+(define rs-main-loop-time-in-msecs 0) ; Keep times in msecs as long as possible to avoid doing floating point math.
 
 (define (rs-main-recalculate-loop-length!)
-  (set! rs-main-loop-time-in-secs
-        (/ 60.0 rs-main-bpm)))
+  (set! rs-main-loop-time-in-msecs
+        (/ 60000 rs-main-bpm)))
 
 ;; TODO contracts may seem nice, but they cause the program to stop,
 ;; which is not what you want in a sequencer. For public functions
@@ -122,10 +122,12 @@
 ; Void
 (define (rs-start-main-loop!)
   ; Starts the main loop.
+  (collect-garbage 'minor)
   (set! rs-main-loop
         (thread
          (lambda ()
            (let loop ()
+             (collect-garbage 'minor)
 
              (thread
               (lambda ()
@@ -151,7 +153,7 @@
                 (set! rs-main-tracks-queued '())
                 (end-atomic)
                 ))
-             (sleep rs-main-loop-time-in-secs)
+             (rs-util-rtsleep (inexact->exact (round (exact->inexact rs-main-loop-time-in-msecs))))
              (loop))))))
 
 ; Void
