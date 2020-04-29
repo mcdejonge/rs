@@ -44,7 +44,7 @@
   (-> rs-t? any)
   (let* ([beat-length-ms (/ 60000 (rs-t-bpm track))]
          [div-length-ms (* beat-length-ms (rs-t-div-length track))])
-    (* (rs-t-steps track) div-length-ms)))
+    (round (* (rs-t-steps track) div-length-ms))))
 
 (define/contract (rs-t-play-single-loop! track loop-length)
   ; Play a single iteration of the current seq for the track.
@@ -110,7 +110,7 @@
          (rs-util-rtsleep (rs-t-calculate-loop-length track) 2)
          (match (thread-try-receive)
            ; If all you want to do is change the sequence, you do not
-           ; need to send a new track as the new sequence is picked up
+           ; need to send a new track as the new sequence is picked upu
            ; automatically. You only need this if you want to replace
            ; the currently running track with another.
            [(? rs-t? new-track-info)
