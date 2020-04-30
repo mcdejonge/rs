@@ -1,4 +1,3 @@
-
 #lang racket
 
 ;; Run multiple sequences to diagnose timing problems.
