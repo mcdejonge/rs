@@ -4,8 +4,33 @@
 
 (provide
  rs-util-rtsleep
- rs-util-rtsleep-measure
+ rs-util-diag
+ rs-util-set-diag-mode
  )
+
+;; Diagnosis mode. When turned on it prints diagnostic messages.
+(define rs-util-diag-mode #t)
+(define (rs-util-set-diag-mode true-or-false)
+  (set! rs-util-diag-mode true-or-false))
+
+(define (rs-util-diag message . args)
+  ;; Print a diagnostic message (using printf) but only if
+  ;; rs-util-diag-mode is #t.
+  ;;
+  ;; NOTE: if you need to perform a function call in one of your args,
+  ;; make sure it only happens when diag-mode is #t, in other words
+  ;; supply a procedure object rather than the result of the procedure
+  ;; call. If you do not do this, performance will suffer greatly as
+  ;; your procedure calls will also be executed if they don't need to
+  ;; be (namely when diag-mode is #f).
+  (when rs-util-diag-mode
+    (apply printf (cons message
+                        (map (lambda (item)
+                               (cond [(procedure? item) (item)]
+                                     [else item]))
+                             args)))))
+
+
 
 (define/contract (rs-util-rtsleep ms [pulse-length 100])
   ; Sleep for the given number of milliseconds. pulse-length is the
@@ -27,6 +52,7 @@
     ))
 
 (define (rs-util-rtsleep-measure ms pulse-length)
+  ;; Helper function for timinga rs-util-rtsleep 
   (-> positive? positive? void)
   (printf "~s sleeping for ~s should stop at ~s\n"
           (truncate (current-inexact-milliseconds))
