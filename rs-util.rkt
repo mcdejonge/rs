@@ -9,7 +9,7 @@
  )
 
 ;; Diagnosis mode. When turned on it prints diagnostic messages.
-(define rs-util-diag-mode #t)
+(define rs-util-diag-mode #f)
 (define (rs-util-set-diag-mode true-or-false)
   (set! rs-util-diag-mode true-or-false))
 
@@ -68,19 +68,36 @@
 (define (rs-util-next-loop-length correct-loop-length prev-loop-length expected-end max-difference)
   ;; Calculate the length of a loop taking into account how long it
   ;; took the last one to complete vs how long we expected it to take.
-  ;; Take into account the correct loop length. The difference between the new loop length and the correct loop length will no more than max-difference * the correct loop length.
-  ;; than 110% of the correct loop length.  Returns a list containing
-  ;; the correct loop length, a new loop length and a new end time and
-  ;; the difference.
-  (let* ([now (truncate (current-inexact-milliseconds))]
-         [difference (- now expected-end)]
-         [min-loop-length (* max-difference correct-loop-length)]
-         [max-loop-length (* max-difference correct-loop-length)]
-         [next-loop-length (- prev-loop-length difference)]
+  ;; The difference Take into account the correct loop length. The difference between
+  ;; the new loop length and the correct loop length will no more than
+  ;; max-difference * the correct loop length.
+  ;;
+  ;; Returns a list containing the a new loop length and a new end time.
+  (rs-util-next-loop-length-now (current-inexact-milliseconds) correct-loop-length prev-loop-length expected-end max-difference))
+
+(define 
+  (rs-util-next-loop-length-now now correct-loop-length prev-loop-length expected-end max-difference)
+  ;; This is the real calculation function. It's separated out so it can be tested.
+  (let* ([difference (- now expected-end)]
+         [min-loop-length (- correct-loop-length (* max-difference correct-loop-length))]
+         [max-loop-length (+ correct-loop-length (* max-difference correct-loop-length))]
+         [next-loop-length (- correct-loop-length difference)]
          [real-next-loop-length
           (max min-loop-length (min next-loop-length max-loop-length))]
          [next-loop-end (+ now next-loop-length)])
-    (list real-next-loop-length next-loop-end difference)))
+    (rs-util-diag "Loop of ~s ms had to run at ~s but ran for ~s
+\tUntil ~s (now: ~s) so difference is ~s
+\tLoop must now run for ~s which means ~s\n"
+                  correct-loop-length
+                  prev-loop-length
+                  (+ prev-loop-length difference)
+                  expected-end
+                  now
+                  difference
+                  next-loop-length
+                  real-next-loop-length)
+    ;; TODO if difference is < 5 try to bring the next-loop-length back to what it should be.
+    (list real-next-loop-length next-loop-end)))
  
 (define (rs-util-loop-procedure-and-wait procedure loop-length max-difference)
   ;; Loop the supplied procedure and wait for the given number of ms.
@@ -92,9 +109,10 @@
   ;; loop stops.
   (-> procedure? positive? positive?)
   (let loop ([next-loop-length loop-length]
-             [expect-end-at (+ (current-inexact-milliseconds) loop-length)]
-             [difference 0])
-    (if (and (rs-util-rtsleep next-loop-length) (procedure))
+             [expect-end-at (+ (current-inexact-milliseconds) loop-length)])
+    (rs-util-diag "Starting new iteration of ~s loop with length ~s\n"
+                  loop-length next-loop-length)
+    (if (not (xor (procedure) (rs-util-rtsleep next-loop-length 2) ))
         (apply loop (rs-util-next-loop-length loop-length
                                               next-loop-length
                                               expect-end-at
@@ -109,3 +127,29 @@
                  (and (printf "Procedure is called\n") (set! teller (+ teller 1)) (lambda () #t)))))
  300
  1/10)
+
+(module+ test
+  (require rackunit)
+
+  ;; Function for running simple tests in which the new loop length is
+  ;; within the acceptable difference from the correct loop length.
+  (define (test-function-within-allowed-difference
+           correct-loop-length prev-loop-length real-loop-length expected-new-loop-length)
+    (let* ([now 150000]
+           [prev-loop-length 300]
+           [expected-end (+ (- now real-loop-length) prev-loop-length)]
+           [max-difference 1/10]
+           [result (rs-util-next-loop-length-now now
+                                                 correct-loop-length
+                                                 prev-loop-length
+                                                 expected-end
+                                                 max-difference)])
+      (check-equal? result (list expected-new-loop-length (+ now expected-new-loop-length)))
+      )
+    )
+  ;; Real result is too long.
+  (test-function-within-allowed-difference 300 300 303 297)
+  ;; Real result is too short.
+  (test-function-within-allowed-difference 300 300 297 303)
+  
+  )
