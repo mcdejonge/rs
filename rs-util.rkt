@@ -6,11 +6,11 @@
  rs-util-rtsleep
  rs-util-diag
  rs-util-set-diag-mode
- rs-util-loop-procedure-and-wait
+ rs-util-loop-and-wait
  )
 
 ;; Diagnosis mode. When turned on it prints diagnostic messages.
-(define rs-util-diag-mode #t)
+(define rs-util-diag-mode #f)
 (define (rs-util-set-diag-mode true-or-false)
   (set! rs-util-diag-mode true-or-false))
 
@@ -33,7 +33,7 @@
 
 
 
-(define/contract (rs-util-rtsleep ms [pulse-length 100])
+(define/contract (rs-util-rtsleep ms [pulse-length 10])
   ; Sleep for the given number of milliseconds. pulse-length is the
   ; number of milliseconds between checks against the time of the
   ; clock. The idea is that using smaller sleep increments will keep
@@ -99,35 +99,62 @@
                   real-next-loop-length)
     ;; TODO if difference is < 5 try to bring the next-loop-length back to what it should be.
     (list real-next-loop-length next-loop-end)))
- 
-(define (rs-util-loop-procedure-and-wait procedure loop-length max-difference)
-  ;; Loop the supplied procedure and wait for the given number of ms.
+
+(define (list-or-procedure? input)
+  (or (list? input) (procedure? input)))
+  
+(define (rs-util-loop-and-wait list-or-procedure loop-length max-difference)
+  ;; Loop the supplied procedure or list of procedures and wait for the given number of ms.
   ;; Attempts to correct the time to wait based on the duration of the
   ;; last iteration. The correction will not, however, be more than
   ;; max-difference * loop-length more or less than loop-length.
   ;;
-  ;; The procedure MUST return true or false. If it returns false the
-  ;; loop stops.
-  (-> procedure? positive? positive?)
-  (let loop ([next-loop-length loop-length]
-             [expect-end-at (+ (current-inexact-milliseconds) loop-length)])
-    (rs-util-diag "Starting new iteration of ~s loop with length ~s\n"
-                  loop-length next-loop-length)
-    (when (not (xor (procedure) (rs-util-rtsleep next-loop-length 2) ))
+  ;; If supplied a procedure this procedure MUST return true or
+  ;; false. If it returns false the loop stops.
+  ;;
+  ;; If supplied a list it will loop through each item. If an item is
+  ;; a procedure it will call it.
+  (-> list-or-procedure? positive? positive?)
+  (when (procedure? list-or-procedure)
+    (let loop ([next-loop-length loop-length]
+               [expect-end-at (+ (current-inexact-milliseconds) loop-length)])
+      (rs-util-diag "Starting new iteration of ~s loop with length ~s\n"
+                    loop-length next-loop-length)
+      (when (not (xor (list-or-procedure) (rs-util-rtsleep next-loop-length 1) ))
         (apply loop (rs-util-next-loop-length loop-length
                                               next-loop-length
                                               expect-end-at
                                               max-difference)))))
+  ;; We're dealing with a list. Iterate through it and call items as needed.
+  (when (list? list-or-procedure)
+    (for/fold ([next-loop-length loop-length]
+               [expect-end-at (+ (current-inexact-milliseconds) loop-length)])
+              ([item list-or-procedure])
+      (when (procedure? item)
+        (item))
+      (rs-util-rtsleep next-loop-length 1)
+      (apply values (rs-util-next-loop-length loop-length
+                                              next-loop-length
+                                              expect-end-at
+                                              max-difference))
+              )
+    
+    )
+  )
 
 ;; (define teller 0)
-;; (rs-util-loop-procedure-and-wait
+;; (rs-util-loop-and-wait
 ;;  (lambda () (
 ;;              (if (> teller 9)
 ;;                  (lambda () #f)
 ;;                  (and (printf "Procedure is called\n") (set! teller (+ teller 1)) (lambda () #t)))))
 ;;  300
 ;;  1/10)
-
+;; (define fn (lambda () (printf "Calling fn\n")))
+;; (rs-util-loop-and-wait
+;;  (list fn fn fn fn null fn fn fn fn fn)
+;;  300
+;;  1/10)
 
 
 (module+ test

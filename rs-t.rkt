@@ -50,27 +50,16 @@
   ; Play a single iteration of the current seq for the track.
   ; TODO deal with offsets
   (-> rs-t? positive? void)
-  (let ([div-length-ms (- (/ loop-length (length (rs-t-seq track))) 0)])
-    ;; (for ([seq-item (rs-t-seq track)])
-    ;;   (when (rs-e? seq-item)
-    ;;     (when (procedure? (rs-e-fn seq-item))
-    ;;       (thread (lambda () ((rs-e-fn seq-item) div-length-ms)))))
-    ;;   (rs-util-rtsleep-measure (inexact->exact (round div-length-ms)) 200)
-    ;;    )
-    (for/fold
-        ([current-step-length (truncate div-length-ms)]
-         [expect-end-at (+ (truncate (current-inexact-milliseconds)) div-length-ms)])
-        ([seq-item (rs-t-seq track)])
-      (when (rs-e? seq-item)
-        (when (procedure? (rs-e-fn seq-item))
-          (thread (lambda () ((rs-e-fn seq-item) div-length-ms)))))
-      (rs-util-rtsleep (inexact->exact (round (exact->inexact current-step-length))) 2)
-      (values (+ div-length-ms (- (truncate (current-inexact-milliseconds)) expect-end-at))
-              (+ (+ div-length-ms (- (truncate (current-inexact-milliseconds)) expect-end-at))
-                 (truncate (current-inexact-milliseconds)
-                  )))
-      )
-    (void)))
+  (let* ([div-length-ms (- (/ loop-length (length (rs-t-seq track))) 0)]
+        [items-executable
+         (map (lambda (item)
+                (cond [(rs-e? item)
+                       (lambda () ((rs-e-fn item) div-length-ms))]
+                      [else (void)])) (rs-t-seq track))])
+    (rs-util-loop-and-wait items-executable div-length-ms 1/10))
+  (void))
+    
+    
 
 (define (event-or-null? input)
   ; Check if something is an event (see rs-e) or null.
@@ -81,7 +70,7 @@
   ; Return a thread that plays continuously until it receives a 'stop message.
   (thread
    (lambda ()
-     (rs-util-loop-procedure-and-wait
+     (rs-util-loop-and-wait
       (lambda ()
         (collect-garbage 'minor)
         (thread (lambda ()
