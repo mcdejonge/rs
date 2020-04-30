@@ -9,6 +9,9 @@
  rs-util-loop-and-wait
  )
 
+;; The length of a sleep pulse insite rs-util-loop-and-wait. Smaller = tighter.
+(define rs-util-loop-resolution 1)
+
 ;; Diagnosis mode. When turned on it prints diagnostic messages.
 (define rs-util-diag-mode #f)
 (define (rs-util-set-diag-mode true-or-false)
@@ -120,7 +123,7 @@
                [expect-end-at (+ (current-inexact-milliseconds) loop-length)])
       (rs-util-diag "Starting new iteration of ~s loop with length ~s\n"
                     loop-length next-loop-length)
-      (when (not (xor (list-or-procedure) (rs-util-rtsleep next-loop-length 1) ))
+      (when (not (xor (list-or-procedure) (rs-util-rtsleep next-loop-length rs-util-loop-resolution) ))
         (apply loop (rs-util-next-loop-length loop-length
                                               next-loop-length
                                               expect-end-at
@@ -132,7 +135,7 @@
               ([item list-or-procedure])
       (when (procedure? item)
         (item))
-      (rs-util-rtsleep next-loop-length 1)
+      (rs-util-rtsleep next-loop-length rs-util-loop-resolution)
       (apply values (rs-util-next-loop-length loop-length
                                               next-loop-length
                                               expect-end-at
