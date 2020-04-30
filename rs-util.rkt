@@ -6,10 +6,11 @@
  rs-util-rtsleep
  rs-util-diag
  rs-util-set-diag-mode
+ rs-util-loop-procedure-and-wait
  )
 
 ;; Diagnosis mode. When turned on it prints diagnostic messages.
-(define rs-util-diag-mode #f)
+(define rs-util-diag-mode #t)
 (define (rs-util-set-diag-mode true-or-false)
   (set! rs-util-diag-mode true-or-false))
 
@@ -19,7 +20,7 @@
   ;;
   ;; NOTE: if you need to perform a function call in one of your args,
   ;; make sure it only happens when diag-mode is #t, in other words
-  ;; supply a procedure object rather than the result of the procedure
+  ;; supply a procedure object rather than the result of a procedure
   ;; call. If you do not do this, performance will suffer greatly as
   ;; your procedure calls will also be executed if they don't need to
   ;; be (namely when diag-mode is #f).
@@ -112,21 +113,22 @@
              [expect-end-at (+ (current-inexact-milliseconds) loop-length)])
     (rs-util-diag "Starting new iteration of ~s loop with length ~s\n"
                   loop-length next-loop-length)
-    (if (not (xor (procedure) (rs-util-rtsleep next-loop-length 2) ))
+    (when (not (xor (procedure) (rs-util-rtsleep next-loop-length 2) ))
         (apply loop (rs-util-next-loop-length loop-length
                                               next-loop-length
                                               expect-end-at
-                                              max-difference))
-        (void))))
+                                              max-difference)))))
 
-(define teller 0)
-(rs-util-loop-procedure-and-wait
- (lambda () (
-             (if (> teller 10)
-                 (lambda () #f)
-                 (and (printf "Procedure is called\n") (set! teller (+ teller 1)) (lambda () #t)))))
- 300
- 1/10)
+;; (define teller 0)
+;; (rs-util-loop-procedure-and-wait
+;;  (lambda () (
+;;              (if (> teller 9)
+;;                  (lambda () #f)
+;;                  (and (printf "Procedure is called\n") (set! teller (+ teller 1)) (lambda () #t)))))
+;;  300
+;;  1/10)
+
+
 
 (module+ test
   (require rackunit)

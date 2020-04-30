@@ -76,52 +76,29 @@
   ; Check if something is an event (see rs-e) or null.
   (or (rs-e? input) (null? input)))
 
-(define (rs-t-next-loop-length correct-loop-length prev-loop-length expected-end)
-  ; Calculate the length of a loop taking into account how long it
-  ; took the last one to complete vs how long we expected it to take.
-  ; Take into account the correct loop length. The new loop length
-  ; should be no less than 90% of the correct loop length and no more
-  ; than 110% of the correct loop length.  Returns a list containing
-  ; the correct loop length, a new loop length and a new end time and
-  ; the difference.
-  (let* ([now (truncate (current-inexact-milliseconds))]
-         [difference (- now expected-end)]
-         [min-loop-length (* (/ 9 10) correct-loop-length)]
-         [max-loop-length (* (/ 11 10) correct-loop-length)]
-         [next-loop-length (- prev-loop-length difference)]
-         [real-next-loop-length
-          (max min-loop-length (min next-loop-length max-loop-length))]
-         [next-loop-end (+ now next-loop-length)])
-    (list real-next-loop-length next-loop-end difference)))
-  
 (define (rs-t-play! track)
   (-> rs-t? thread?)
   ; Return a thread that plays continuously until it receives a 'stop message.
   (thread
    (lambda ()
-     (let ([loop-length (rs-t-calculate-loop-length track)])
-       (let loop([next-loop-length loop-length]
-                 [expect-end-at (+ (current-inexact-milliseconds) loop-length )]
-                 [difference 0])
-         (collect-garbage 'minor)
-         (thread (lambda ()
-                   (rs-t-play-single-loop! track (rs-t-calculate-loop-length track))
-                   ))
-         (rs-util-rtsleep (rs-t-calculate-loop-length track) 2)
-         (match (thread-try-receive)
-           ; If all you want to do is change the sequence, you do not
-           ; need to send a new track as the new sequence is picked upu
-           ; automatically. You only need this if you want to replace
-           ; the currently running track with another.
-           [(? rs-t? new-track-info)
-            (set! track new-track-info)
-            (apply loop (rs-t-next-loop-length loop-length next-loop-length expect-end-at))]
-           [ 'stop
-             (void)]
-           [ #f
-            (apply loop (rs-t-next-loop-length loop-length next-loop-length expect-end-at))]
-                      ))))))
-       
+     (rs-util-loop-procedure-and-wait
+      (lambda ()
+        (collect-garbage 'minor)
+        (thread (lambda ()
+                  (rs-t-play-single-loop! track (rs-t-calculate-loop-length track))))
+        (match (thread-try-receive)
+          ; If all you want to do is change the sequence, you do not
+          ; need to send a new track as the new sequence is picked upu
+          ; automatically. You only need this if you want to replace
+          ; the currently running track with another.
+          [(? rs-t? new-track-info)
+           (set! track new-track-info)
+           #t]
+          [ 'stop #f]
+          [ #f #t])
+        )
+      (rs-t-calculate-loop-length track) 1/10))))
+
 (module+ test
   (define (rs-t-test)
     (let* ([event1
@@ -147,4 +124,5 @@
       (thread-send track-thread
                    'stop)))
   (rs-t-test)
+  
   )
