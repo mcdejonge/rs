@@ -4,8 +4,34 @@
 
 (provide
  rs-util-rtsleep
- rs-util-rtsleep-measure
+ rs-util-diag
+ rs-util-set-diag-mode
  )
+
+;; Diagnosis mode. When turned on it prints diagnostic messages.
+(define rs-util-diag-mode #t)
+(define (rs-util-set-diag-mode true-or-false)
+  (set! rs-util-diag-mode true-or-false))
+
+(define (rs-util-diag message . args)
+  ;; Print a diagnostic message (using printf) but only if
+  ;; rs-util-diag-mode is #t.
+  ;;
+  ;; NOTE: if you need to perform a function call in one of your args,
+  ;; make sure it only happens when diag-mode is #t, in other words
+  ;; supply a procedure object rather than the result of the procedure
+  ;; call. If you do not do this, performance will suffer greatly as
+  ;; your procedure calls will also be executed if they don't need to
+  ;; be (namely when diag-mode is #f).
+  (when rs-util-diag-mode
+    (apply printf (cons message
+                        (map (lambda (item)
+                               (cond [(procedure? item) (item)]
+                                     [else item]))
+                             args)))))
+
+(rs-util-diag "Koos ~s\n" (lambda () (printf "Mag niet\n")))
+
 
 (define/contract (rs-util-rtsleep ms [pulse-length 100])
   ; Sleep for the given number of milliseconds. pulse-length is the
@@ -27,6 +53,7 @@
     ))
 
 (define (rs-util-rtsleep-measure ms pulse-length)
+  ;; Helper function for timinga rs-util-rtsleep 
   (-> natural? natural? void)
   (printf "~s sleeping for ~s should stop at ~s\n"
           (truncate (current-inexact-milliseconds))
@@ -37,24 +64,4 @@
           (truncate (current-inexact-milliseconds))
           ms
           (current-inexact-milliseconds)))
-
-
-
-
-  ;; (let* ([end-time (+ ms (current-inexact-milliseconds))])
-  ;;   (printf "Sleeping for ~s ms should stop at ~s\n" ms end-time)
-  ;;   (for/fold ([next-pulse (+ pulse-length (current-inexact-milliseconds))])
-  ;;             ([i (in-range (quotient ms pulse-length))])
-  ;;     (printf "Iteration ~s should stop at ~s\n" i next-pulse)
-  ;;     (sleep (/ pulse-length 1000.0))
-  ;;     (+ next-pulse pulse-length))
-  ;;   (when (< (inexact->exact (truncate (current-inexact-milliseconds)))
-  ;;            (inexact->exact (truncate end-time)))
-  ;;     (printf "Must sleep for remainder\n")
-  ;;     (sleep (/ (- end-time (current-inexact-milliseconds)) 1000.0)))
-  ;;   (printf "Done sleeping at ~a\n" (current-inexact-milliseconds))))
-
-
-
-  
 
