@@ -30,7 +30,6 @@
                                      [else item]))
                              args)))))
 
-(rs-util-diag "Koos ~s\n" (lambda () (printf "Mag niet\n")))
 
 
 (define/contract (rs-util-rtsleep ms [pulse-length 100])
