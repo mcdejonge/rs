@@ -74,6 +74,7 @@
 (define (rs-main-recalculate-loop-length!)
   (set! rs-main-loop-time-in-msecs
         (/ 60000 rs-main-bpm)))
+(rs-main-recalculate-loop-length!)
 
 ;; TODO contracts may seem nice, but they cause the program to stop,
 ;; which is not what you want in a sequencer. For public functions
@@ -123,38 +124,43 @@
 (define (rs-start-main-loop!)
   ; Starts the main loop.
   (collect-garbage 'minor)
+  (printf "Loop length is ~s\n"
+          rs-main-loop-time-in-msecs)
   (set! rs-main-loop
         (thread
          (lambda ()
-           (let loop ()
-             (collect-garbage 'minor)
+           (rs-util-loop-and-wait
+            (lambda ()
+              (collect-garbage 'minor)
+              ; Start new tracks as needed.  This is atomic because the
+              ; new track queue needs to be empty when this is done. (I
+              ; think).
+              (thread
+               (lambda()
+                 (start-atomic)
+                 (for ([track rs-main-tracks-queued])
+                   (let ((track-thread (rs-t-play! track)))
+                     (set! rs-main-tracks-running
+                           (append rs-main-tracks-running (list track-thread)))))
+                 (set! rs-main-tracks-queued '())
+                 (end-atomic)
+                 ))
+              ; Remove tracks that need to be stopped.
+              (thread
+               (lambda ()
+                 (start-atomic)
+                 (for ([track-index rs-main-tracks-stopping])
+                   (let ((track-to-stop (list-ref rs-main-tracks-running track-index)))
+                     (set! rs-main-tracks-running (remove track-to-stop rs-main-tracks-running))
+                     (thread-send track-to-stop 'stop)))
+                 (set! rs-main-tracks-stopping '())
+                 (end-atomic)))
 
-             (thread
-              (lambda ()
-                ; Remove tracks that need to be stopped.
-                (start-atomic)
-                (for ([track-index rs-main-tracks-stopping])
-                  (let ((track-to-stop (list-ref rs-main-tracks-running track-index)))
-                    (set! rs-main-tracks-running (remove track-to-stop rs-main-tracks-running))
-                    (thread-send track-to-stop 'stop)))
-                (set! rs-main-tracks-stopping '())
-                (end-atomic)))
 
-             ; Start new tracks as needed.  This is atomic because the
-             ; new track queue needs to be empty when this is done. (I
-             ; think).
-             (thread
-              (lambda()
-                (start-atomic)
-                (for ([track rs-main-tracks-queued])
-                  (let ((track-thread (rs-t-play! track)))
-                    (set! rs-main-tracks-running
-                          (append rs-main-tracks-running (list track-thread)))))
-                (set! rs-main-tracks-queued '())
-                (end-atomic)
-                ))
-             (rs-util-rtsleep (inexact->exact (round (exact->inexact rs-main-loop-time-in-msecs))))
-             (loop))))))
+              )
+            rs-main-loop-time-in-msecs
+            1/20
+            )))))
 
 ; Void
 (define (rs-stop-main-loop!)
@@ -194,4 +200,5 @@
 
       ))
   (rs-test)
+
   )
