@@ -124,8 +124,6 @@
 (define (rs-start-main-loop!)
   ; Starts the main loop.
   (collect-garbage 'minor)
-  (printf "Loop length is ~s\n"
-          rs-main-loop-time-in-msecs)
   (set! rs-main-loop
         (thread
          (lambda ()
