@@ -16,7 +16,8 @@
 (require "rs.rkt"
          "rs-m.rkt")
 
-(when (not (length (list)))
+(printf "Available MIDI ports: ~s\n" (rs-m-list-ports))
+(when (not (length (rs-m-list-ports)))
   (printf "No MIDI ports available. This will not work.\n"))
 
 ;; Again, set up a simple 128 BPM loop with 16 sub divisions of 1/4 beats
