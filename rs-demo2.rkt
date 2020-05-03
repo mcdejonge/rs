@@ -11,7 +11,8 @@
 (require "rs.rkt"
          "rs-m.rkt")
 
-(when (not (length (list)))
+(printf "Available MIDI ports: ~s\n" (rs-m-list-ports))
+(when (not (length (rs-m-list-ports)))
   (printf "No MIDI ports available. This will not work.\n"))
 
 ;; Again, set up a simple 128 BPM loop with 16 sub divisions of 1/4 beats
@@ -27,9 +28,13 @@
 
 ;; Create an instrument on the first channel of the first available
 ;; MIDI port.
+;;
+;; The first argument to rs-m-instr is the MIDI port. The second is
+;; the channel number.
 (define instr1 (rs-m-instr 0 1))
 
-;; Create another instrument on the second channel of the first available MIDI port.
+;; Create another instrument on the second channel of the first
+;; available MIDI port.
 (define instr2 (rs-m-instr 0 2))
 
 ;; Create events and sequences for the first instrument.
