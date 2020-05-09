@@ -9,8 +9,6 @@
  rs-util-loop-and-wait
  )
 
-;; The length of a sleep pulse insite rs-util-loop-and-wait. Smaller = tighter.
-(define rs-util-loop-resolution 1)
 
 ;; Diagnosis mode. When turned on it prints diagnostic messages.
 (define rs-util-diag-mode #f)
@@ -36,24 +34,15 @@
 
 
 
-(define/contract (rs-util-rtsleep ms [pulse-length 10])
-  ; Sleep for the given number of milliseconds. pulse-length is the
-  ; number of milliseconds between checks against the time of the
-  ; clock. The idea is that using smaller sleep increments will keep
-  ; the timing more exact.
-  ; TODO return the delta? Or leave this to someone else?
-  (->* (positive?)
-       (positive?)
-       void)
-  (let* ([now (truncate (current-inexact-milliseconds))]
-         [end-time (+ now ms)]
-         [delta (- end-time now)])
-    (cond [(< delta 1) void]
-          [(<= delta pulse-length)
-           (sleep (/ delta 1000.0))]
-          [else (sleep (/ pulse-length 1000.0))
-                (rs-util-rtsleep (- end-time (truncate (current-inexact-milliseconds))) pulse-length)])
-    ))
+(define/contract (rs-util-rtsleep ms)
+  ;; Sleep for the given number of milliseconds. More accurate than
+  ;; (sleep) because it checks every millisecond if it should wake up.
+  (-> positive? void)
+  (let ([end (+ (current-inexact-milliseconds) ms)])
+    (let loop ()
+      (when (< (current-inexact-milliseconds) end)
+        (sleep 0.001)
+        (loop)))))
 
 (define (rs-util-rtsleep-measure ms pulse-length)
   ;; Helper function for timinga rs-util-rtsleep 
@@ -123,7 +112,7 @@
                [expect-end-at (+ (current-inexact-milliseconds) loop-length)])
       (rs-util-diag "Starting new iteration of ~s loop with length ~s\n"
                     loop-length next-loop-length)
-      (when (not (xor (list-or-procedure) (rs-util-rtsleep next-loop-length rs-util-loop-resolution) ))
+      (when (not (xor (list-or-procedure) (rs-util-rtsleep next-loop-length ) ))
         (apply loop (rs-util-next-loop-length loop-length
                                               next-loop-length
                                               expect-end-at
@@ -135,7 +124,7 @@
               ([item list-or-procedure])
       (when (procedure? item)
         (item))
-      (rs-util-rtsleep next-loop-length rs-util-loop-resolution)
+      (rs-util-rtsleep next-loop-length)
       (apply values (rs-util-next-loop-length loop-length
                                               next-loop-length
                                               expect-end-at
@@ -144,21 +133,6 @@
     
     )
   )
-
-;; (define teller 0)
-;; (rs-util-loop-and-wait
-;;  (lambda () (
-;;              (if (> teller 9)
-;;                  (lambda () #f)
-;;                  (and (printf "Procedure is called\n") (set! teller (+ teller 1)) (lambda () #t)))))
-;;  300
-;;  1/10)
-;; (define fn (lambda () (printf "Calling fn\n")))
-;; (rs-util-loop-and-wait
-;;  (list fn fn fn fn null fn fn fn fn fn)
-;;  300
-;;  1/10)
-
 
 (module+ test
   (require rackunit)
