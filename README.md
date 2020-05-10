@@ -15,7 +15,7 @@ Here's an example in which a boom tsss loop is assigned to a track:
 
 (a '() is an empty list or null, so the above sequence has four steps, on the first of which an event called "boom" plays and on the third of which an event called "tsss" is played).
 
-Sequences can have arbitrary lengths and the number of items in a sequence is independent of the loop length of a track so it is very easy to play with polymeter or polyrhythm.
+Sequences can have arbitrary lengths and the number of items in a sequence is independent of the loop length of a track so it is very easy to play with polymeter or polyrhythm. Sequences can even be nested!
 
 You can have as many tracks, each running their own sequences, each of which can be a different length (theoretically they could even run at different speeds) as your system can handle (if it's too much timing will become sloppier).
 
