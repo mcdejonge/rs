@@ -90,12 +90,12 @@ Have fun!
   
     You can now nest sequences, like this:
   
-    ```racket
+  ```racket
   (define hihats (list hc
                        ho
                        hc
                        (list hh hh hh)))
-    ```
+  ```
     
     A new demo, rs-demo-drums.rkt shows off this feature.
   * Timing code has been slimmed down, which hopefully increases performance.
