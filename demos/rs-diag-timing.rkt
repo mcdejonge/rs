@@ -13,8 +13,8 @@
 ;; three instruments, one of which listens on channel 1, the other on
 ;; channel 2 and the third on channel 3
 
-(require "rs.rkt"
-         "rs-m.rkt")
+(require "../rs.rkt"
+         "../rs-m.rkt")
 
 (printf "Available MIDI ports: ~s\n" (rs-m-list-ports))
 (when (not (length (rs-m-list-ports)))

@@ -46,19 +46,19 @@ RtMidi is not a standalone installation. You need download the RtMidi library in
 Instructions copied and pasted from the [RtMidi documentation](https://docs.racket-lang.org/rtmidi/index.html):
 
 > This package is not self-contained. It depends on the RtMidi package, and also requires you to compile a dynamic library used to connect to the RtMidi code.
-
+>
 > At this point, this means that installing this package will require you to locate the package directory where this package is installed.
-
+>
 > The best way to do this is probably to install the package using raco pkg install or the package manager, and then to evaluate
-
+>
 > ```(collection-path "rtmidi")```
-
+>
 > to see where the directory lives.
-
+>
 > Once you’ve located the collection directory, you’ll need to extract http://www.music.mcgill.ca/~gary/rtmidi/release/rtmidi-2.1.0.tar.gz to the collection directory. Then run ‘make $PLATFORM‘, where ‘PLATFORM‘ is one of ‘linux‘, ‘macosx‘, or ‘windows‘.
-
+>
 > The wrapper is C++98 and should compile with any modern C++ compiler.
-
+>
 > I haven’t tried the Windows build with this Makefile; you might need to make some adjustments.
 
 On a Mac, but possibly also on Linux, you may get an error about not being able to find a wrapper-rtmidi file. To fix this error, you need to modify the code of the file ```main.rkt``` in the RtMidi package (you can find out where it lives using the ```(collection-path "rtmidi")``` command you used before).
@@ -77,9 +77,30 @@ Installing rs itself is a simple matter of downloading the repository somewhere.
 
 2. Next, open one of the demo files in your Racket editing environment of choice and run it. If you've set up everything correctly you should be hearing a simple sequence.
 
-rs has been tested with DrRacket and with Emacs running racket-mode. When using DrRacket, make sure to disable debugging (Language -> Choose Language -> The Racket Language -> No debugging or profiling). Even with debugging disabled timing in DrRacket is quite sloppy (see "Performance" above) so your best bet is probably to run rs in a REPL in a terminal and to copy and paste commands into it from your editor of choice.
+   rs has been tested with DrRacket and with Emacs running racket-mode. When using DrRacket, make sure to disable debugging (Language -> Choose Language -> The Racket Language -> No debugging or profiling). Even with debugging disabled timing in DrRacket is quite sloppy (see "Performance" above) so your best bet is probably to run rs in a REPL in a terminal and to copy and paste commands into it from your editor of choice.
 
 3. Time to start exploring. There are a couple of demo files you can examine to see how rs works. There's also a file called rs-live.rkt that you can load and modify to start doing live coding.
 
 Have fun!
+
+## Changelog
+
+* **2020-05-10**
+  * **New feature**: Sequences within sequencesa
+  
+    You can now nest sequences, like this:
+  
+    ```racket
+  (define hihats (list hc
+                       ho
+                       hc
+                       (list hh hh hh)))
+    ```
+    
+    A new demo, rs-demo-drums.rkt shows off this feature.
+  * Timing code has been slimmed down, which hopefully increases performance.
+  * rs-util.rkt now exposes (rs-util-set-diag-mode #t|#f) and (rs-util-diag message .args ) so you can have an idea about what rs is doing.
+  * Demos have been put into a separate directory.
+* **2020-05-03** Some cleanup of the demos
+* **2020-05-01** Initial release
 

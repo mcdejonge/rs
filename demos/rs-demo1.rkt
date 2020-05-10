@@ -3,8 +3,8 @@
 ;; Demo (1) for rs, the racket sequencer. This demo plays a simple
 ;; monophonic sequence on channel 1 of the first available MIDI device.
 
-(require "rs.rkt"
-         "rs-m.rkt")
+(require "../rs.rkt"
+         "../rs-m.rkt")
 
 (printf "Available MIDI ports: ~s\n" (rs-m-list-ports))
 (when (not (length (rs-m-list-ports)))
