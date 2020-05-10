@@ -46,18 +46,28 @@
          [div-length-ms (* beat-length-ms (rs-t-div-length track))])
     (round (* (rs-t-steps track) div-length-ms))))
 
-(define/contract (rs-t-play-single-loop! track loop-length)
-  ; Play a single iteration of the current seq for the track.
-  ; TODO deal with offsets
-  (-> rs-t? positive? void)
-  (let* ([div-length-ms (- (/ loop-length (length (rs-t-seq track))) 0)]
+(define/contract (rs-t-play-seq! seq loop-length)
+  ;; Play a single iteration of a sequence during the given number of seconds.
+  ;; TODO deal with offsets.
+  (-> list? positive? void)
+  (let* ([div-length-ms (- (/ loop-length (length seq)) 0)]
         [items-executable
          (map (lambda (item)
                 (cond [(rs-e? item)
                        (lambda () ((rs-e-fn item) div-length-ms))]
-                      [else (void)])) (rs-t-seq track))])
+                      [(and (list? item) (> (length item) 0))
+                       (lambda ()
+                         (rs-util-diag "Encountered sub sequence of ~s items\n" (lambda ()
+                                                                                  (length item)))
+                         (rs-t-play-seq! item div-length-ms))]
+                      [else (void)])) seq)])
     (rs-util-loop-and-wait items-executable div-length-ms 1/10))
   (void))
+  
+(define/contract (rs-t-play-single-loop! track loop-length)
+  ; Play a single iteration of the main sequence for the track.
+  (-> rs-t? positive? void)
+  (rs-t-play-seq! (rs-t-seq track) loop-length))
     
     
 

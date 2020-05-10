@@ -5,7 +5,8 @@
 (require "rs-util.rkt")
 
 (provide (struct-out rs-e)
-         rs-e-create)
+         rs-e-create
+         rs-e-multiple)
 
 (struct rs-e (fn offset) #:mutable #:transparent)
 
