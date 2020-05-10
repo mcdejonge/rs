@@ -100,10 +100,12 @@
 (define/contract (rs-queue-track! track)
   (-> rs-t? void)
   ; Add the given track to the list of tracks to enqueue.
+  (rs-util-diag "Queueing track ~s\n" track)
   (set! rs-main-tracks-queued (cons track rs-main-tracks-queued)))
 
 (define/contract (rs-stop-track! track-no)
   (-> natural? void)
+  (rs-util-diag "Stopping the track with index ~s\n" track-no)
   ; Add the given index to the list of indexes to stop
   ; at the next main loop iteration start.
   (when (< track-no (length rs-main-tracks-running))
@@ -123,6 +125,7 @@
 ; Void
 (define (rs-start-main-loop!)
   ; Starts the main loop.
+  (rs-util-diag "Starting main loop.\n")
   (collect-garbage 'minor)
   (set! rs-main-loop
         (thread
@@ -163,6 +166,7 @@
 ; Void
 (define (rs-stop-main-loop!)
   ; Stops the main loop and all running tracks.
+  (rs-util-diag "Stopping maing loop.\n")
   (for ([track-thread rs-main-tracks-running])
     (thread-send track-thread 'stop))
   (set! rs-main-tracks-running '())

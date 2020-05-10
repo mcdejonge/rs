@@ -78,6 +78,7 @@
 (define (rs-t-play! track)
   (-> rs-t? thread?)
   ; Return a thread that plays continuously until it receives a 'stop message.
+  (rs-util-diag "Creating a new thread for playing thread ~s\n" track)
   (thread
    (lambda ()
      (rs-util-loop-and-wait

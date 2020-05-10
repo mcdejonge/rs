@@ -44,19 +44,6 @@
         (sleep 0.001)
         (loop)))))
 
-(define (rs-util-rtsleep-measure ms pulse-length)
-  ;; Helper function for timinga rs-util-rtsleep 
-  (-> positive? positive? void)
-  (printf "~s sleeping for ~s should stop at ~s\n"
-          (truncate (current-inexact-milliseconds))
-          ms
-          (+ (current-inexact-milliseconds) ms))
-  (rs-util-rtsleep ms pulse-length)
-  (printf "~s slept    for ~s should now  be ~s\n"
-          (truncate (current-inexact-milliseconds))
-          ms
-          (current-inexact-milliseconds)))
-
 
 (define (rs-util-next-loop-length correct-loop-length prev-loop-length expected-end max-difference)
   ;; Calculate the length of a loop taking into account how long it
@@ -78,16 +65,10 @@
          [real-next-loop-length
           (max min-loop-length (min next-loop-length max-loop-length))]
          [next-loop-end (+ now next-loop-length)])
-    (rs-util-diag "Loop of ~s ms had to run at ~s but ran for ~s
-\tUntil ~s (now: ~s) so difference is ~s
-\tLoop must now run for ~s which means ~s\n"
+    (rs-util-diag "Loop of ~s ms had to run at ~s but ran for ~s. Next iter will be ~s\n"
                   correct-loop-length
                   prev-loop-length
                   (+ prev-loop-length difference)
-                  expected-end
-                  now
-                  difference
-                  next-loop-length
                   real-next-loop-length)
     ;; TODO if difference is < 5 try to bring the next-loop-length back to what it should be.
     (list real-next-loop-length next-loop-end)))
@@ -110,7 +91,7 @@
   (when (procedure? list-or-procedure)
     (let loop ([next-loop-length loop-length]
                [expect-end-at (+ (current-inexact-milliseconds) loop-length)])
-      (rs-util-diag "Starting new iteration of ~s loop with length ~s\n"
+      (rs-util-diag "Starting new iteration of a loop with proper length ~s that will have length ~s\n"
                     loop-length next-loop-length)
       (when (not (xor (list-or-procedure) (rs-util-rtsleep next-loop-length ) ))
         (apply loop (rs-util-next-loop-length loop-length
