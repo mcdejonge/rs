@@ -85,6 +85,17 @@ Have fun!
 
 ## Changelog
 
+* **2020-05-12**
+  * **New feature**: chords
+  
+    Use rs-m-play-chord and rs-m-event-play-chord to play multiple notes simultaneously on the same instrument:
+    
+  ```racket
+  (define chord (rs-m-event-play-chord instr (list 60 65 69))
+  ```
+  
+  * Added polyrhythm demo.
+ 
 * **2020-05-10**
   * **New feature**: Sequences within sequencesa
   
