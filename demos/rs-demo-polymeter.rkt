@@ -1,8 +1,9 @@
 #lang racket
 
-;; Demo (2) for rs, the racket sequencer. This demo shows you can play
-;; multiple sequences that each have a different number of steps
-;; (polymeter) on different instruments.
+;; This demo shows you can play multiple sequences that each have a
+;; different number of steps loop length (polymeter) on different
+;; instruments. There is a different demo that demonstrates running
+;; sequences of different lengths simultaneously (polymeter).
 ;;
 ;; To prepare, make sure you have at least one MIDI port available and
 ;; two instruments, one of which listens on channel 1 and the other on

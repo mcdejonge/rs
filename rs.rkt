@@ -8,6 +8,10 @@
 
 (provide
 
+ rs-main-bpm
+ rs-main-div-length
+ rs-main-steps
+ 
  rs-queue-track!
  rs-set-global-bpm!
  rs-set-global-div-length!

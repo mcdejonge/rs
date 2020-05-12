@@ -43,5 +43,5 @@
                             test-note
                             '())) ;; That's right, 5 notes in the same time!
 
-;; Want to know what else you can do? See rs-demo2 for an example of
+;; Want to know what else you can do? See rs-demo-polymeter for an example of
 ;; adding tracks and stopping tracks. Have fun!
