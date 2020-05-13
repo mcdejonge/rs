@@ -28,6 +28,16 @@
  (struct-out rs-e)
  rs-e-create
 
+ ; From rs-m.rkt
+ rs-m-event-cc
+ rs-m-event-play
+ rs-m-event-play-chord
+ rs-m-list-ports
+ rs-m-instr
+ rs-m-cc
+ rs-m-play
+ rs-m-play-chord
+
  ; From rs-t.rkt
  (struct-out rs-t)
  rs-t-create
@@ -37,6 +47,7 @@
 
 (require
  "rs-e.rkt"
+ "rs-m.rkt"
  "rs-t.rkt"
  "rs-util.rkt"
  ffi/unsafe/atomic)

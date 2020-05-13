@@ -69,13 +69,15 @@ Go to https://github.com/mcdejonge/rtmidi and find a modified version of ```main
 
 ### Installing rs
 
-Installing rs itself is a simple matter of downloading the repository somewhere.
+Installing rs itself is a simple matter of installing it using the racket package manager (raco pkg install rs) but you can also download the repository you're currently viewing somewhere.
+
+You will also want to install the demos: https://github.com/mcdejonge/rs-demos , if only because this repository contains a starting template.
 
 ## Getting started
 
 1. First, make sure you have at least one available MIDI port on your system that is connected to something that makes a sound. A loopback device to a DAW would be a good choice but hardware should also work.
 
-2. Next, open one of the demo files in your Racket editing environment of choice and run it. If you've set up everything correctly you should be hearing a simple sequence.
+2. Next, open one of the demo files (available from https://github.com/mcdejonge/rs-demos )in your Racket editing environment of choice and run it. If you've set up everything correctly you should be hearing a simple sequence.
 
    rs has been tested with DrRacket and with Emacs running racket-mode. When using DrRacket, make sure to disable debugging (Language -> Choose Language -> The Racket Language -> No debugging or profiling). Even with debugging disabled timing in DrRacket is quite sloppy (see "Performance" above) so your best bet is probably to run rs in a REPL in a terminal and to copy and paste commands into it from your editor of choice.
 
@@ -84,6 +86,8 @@ Installing rs itself is a simple matter of downloading the repository somewhere.
 Have fun!
 
 ## Changelog
+
+* **2020-05-13** Turned rs into a package.
 
 * **2020-05-12**
   * **New feature**: chords
