@@ -265,6 +265,8 @@ Directly play the given notes simultaneously for the given amount of time, at th
 
 It is also possible to set MIDI cc values. Use these functions:
 
+@margin-note{The rs-demos package at @url{https://github.com/mcdejonge/rs-demos} contains a tool for setting up MIDI cc listeners in your DAW / on your instument.
+ }
 @defproc[(rs-m-event-cc [instr rs-m-instr-struct?]
                          [cc-no rs-m-valid-midi-value?]
                          [cc-val rs-m-valid-midi-value?]
