@@ -41,7 +41,6 @@
  ; From rs-t.rkt
  (struct-out rs-t)
  rs-t-create
- rs-t-play!
 
  )
 
