@@ -27,6 +27,7 @@
  ; From rs-e.rkt
  (struct-out rs-e)
  rs-e-create
+ rs-e-multiple
 
  ; From rs-m.rkt
  rs-m-event-cc
