@@ -87,6 +87,8 @@ Have fun!
 
 ## Changelog
 
+* **2020-05-14** Provided Scribble documentation.
+
 * **2020-05-13** Turned rs into a package.
 
 * **2020-05-12**
