@@ -1,8 +1,9 @@
-#lang racket
+#lang racket/base
 
 ;; Code for dealing with events.
 
-(require "rs-util.rkt")
+(require racket/contract/base
+         racket/contract/region)
 
 (provide (struct-out rs-e)
          rs-e-create

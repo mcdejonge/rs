@@ -1,4 +1,10 @@
-#lang racket
+#lang racket/base
+
+(require racket/bool
+         racket/contract/base
+         racket/contract/region)
+
+
 
 ;; Utility functions for use in rs
 

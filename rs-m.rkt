@@ -1,9 +1,10 @@
-#lang racket
+#lang racket/base
 
 ;; This module contains functions for sending MIDI notes to instruments.
 
-(require "rs-midi-core.rkt"
-         "rs-e.rkt")
+(require racket/math
+         "rs-e.rkt"
+         "rs-midi-core.rkt")
 
 (provide
  rs-m-event-cc

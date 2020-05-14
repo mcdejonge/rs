@@ -1,4 +1,14 @@
-#lang racket
+#lang racket/base
+
+(require "rs-e.rkt"
+         "rs-m.rkt"
+         "rs-t.rkt"
+         "rs-util.rkt"
+         racket/contract/base
+         racket/contract/region
+         racket/math
+         ffi/unsafe/atomic)
+
 
 ;; Main rs file. Contains the main loop and functions for interacting with it.
 
@@ -45,12 +55,6 @@
 
  )
 
-(require
- "rs-e.rkt"
- "rs-m.rkt"
- "rs-t.rkt"
- "rs-util.rkt"
- ffi/unsafe/atomic)
 
 (define rs-main-loop '())
 

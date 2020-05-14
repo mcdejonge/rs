@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 ;; Core MIDI related functionality for rs. Wraps the *true* core MIDI
 ;; functionality in an interface.
@@ -26,7 +26,11 @@
 ;; RtMidi is not documented. Code is here
 ;; https://github.com/jbclements/rtmidi/blob/master/rtmidi/main.rkt
 
-(require rtmidi)
+(require racket/contract/base
+         racket/contract/region
+         racket/list
+         racket/math
+         rtmidi)
 
 ;; Setup
 

@@ -1,9 +1,12 @@
-#lang racket
+#lang racket/base
 
 ;; Code for dealing with tracks.
 
-(require "rs-util.rkt"
-         "rs-e.rkt")
+(require racket/contract/base
+         racket/contract/region
+         racket/match
+         "rs-e.rkt"
+         "rs-util.rkt")
 
 (provide (struct-out rs-t)
          rs-t-create
