@@ -10,8 +10,10 @@
 
 @section{Overview}
 
-rs is a set of files / library for doing live coding of MIDI sequencing using the @hyperlink["https://racket-lang.org" "Racket"]
-programming language. Since Racket is a type of Lisp, sequencing in rs is done by creating lists of events and looping them.
+rs - the Racket Sequencer - is a live coding tool that lets you sequence MIDI
+using Racket. A sequence is a simple list of events, you can play multiple
+sequences simultaneously and sequences can have different lengths and
+subdivisions so it's easy to do complex polyrhythms and Euclidean sequencing.
 
 Here's an example in which a boom tsss loop is assigned to a track:
 
@@ -22,26 +24,33 @@ Here's an example in which a boom tsss loop is assigned to a track:
                             '()))
 ]
 
-@margin-note{A @racket['()] is an empty list or @code{null}, so the above sequence has four steps, on the first of which an event called
-"boom" plays and on the third of which an event called "tsss" is played.
-}
+A @racket['()] is an empty list or @code{null}, so this
+sequence has four steps, on the first of which an event called "boom" plays and
+on the third of which an event called "tsss" is played. 
 
-Sequences can have arbitrary lengths and the number of items in a sequence is independent of the loop length of a track
-so it is very easy to play with polymeter or polyrhythm. Sequences can even be nested!
+Sequences can have arbitrary lengths and the number of items in a sequence is
+independent of the loop length of a track so it is very easy to play with
+polymeter or polyrhythm. Sequences can even be nested!
 
-You can have as many tracks, each running their own sequences, each of which can be a different length (theoretically
-they could even run at different speeds) as your system can handle (if it's too much timing will become sloppier).
+You can have as many tracks, each running their own sequences, each of which
+can be a different length (theoretically they could even run at different
+speeds) as your system can handle (if it's too much timing will become
+sloppier).
 
 Programming happens in Racket, so if you can build it in Racket, you can use it to sequence your MIDI (soft) synths.
+
+@local-table-of-contents[]
 
 @section{Status}
 
 rs is a hobby project, built to scratch an itch for myself. It does work - on my system at least, which is a Macbook
-with developer tools installed. If you're not afraid of compiling some code you may very well get it to work on your system as well.
+with developer tools installed. If you're not afraid of compiling some code you may very well get it to work on your system too. I've been told it works without problems on (Arch) Linux as well.
 
-Sending MIDI messages is done with a Racket wrapper around the @hyperlink["https://www.music.mcgill.ca/~gary/rtmidi/" "RtMidi library"].
-I did not write either the wrapper or the library but did manage to get them to work on my system. Getting the wrapper
-to work took some elbow grease, however. See the installation instructions.
+Sending MIDI messages is done with a Racket wrapper around the
+@hyperlink["https://www.music.mcgill.ca/~gary/rtmidi/" "RtMidi library"].  I
+did not write either the wrapper or the library but did manage to get them to
+work on my system. Getting the wrapper to work took some elbow grease,
+however. See the installation instructions.
 
 @section{Performance}
 
@@ -79,23 +88,11 @@ The wrapper is C++98 and should compile with any modern C++ compiler.
 I haven’t tried the Windows build with this Makefile; you might need to make some adjustments.
 }
 
-On a Mac, but possibly also on Linux, you may get an error about not being able to find a wrapper-rtmidi file. To fix
-this error, you need to modify the code of the file ```main.rkt``` in the RtMidi package (you can find out where it
-lives using the ```(collection-path "rtmidi")``` command you used before).
-
-Go to @url["https://github.com/mcdejonge/rtmidi"] and find a modified version of ```main.rkt``` in the @code{rtmidi}
-directory: @url["https://github.com/mcdejonge/rtmidi/blob/master/rtmidi/main.rkt"]
-
-(I've created a pull request on the original repository so maybe by the time you read this you no longer need to
-do this manually).
-
 @subsection{Installing rs}
 
-Installing rs itself is a simple matter of installing it using the racket package manager (@code{raco pkg install rs})
-but you can also download the repository you're currently viewing somewhere.
+Installing rs itself is a simple matter of installing it using the racket package manager (@code{raco pkg install rs}).
 
-You will also want to install the demos: @url{https://github.com/mcdejonge/rs-demos} , if only because this repository
-contains a starting template.
+You will also want to install the demos: @url{https://github.com/mcdejonge/rs-demos} , if only because this repository contains a starting template.
 
 @section{Getting started}
 
@@ -114,9 +111,177 @@ a REPL in a terminal and to copy and paste commands into it from your editor of 
 called rs-live.rkt that you can load and modify to start doing live coding.
 
 Have fun!
+@section[#:tag "functions"]{Functions}
+
+This section lists all the functions that are available to do your live coding with.
+
+@subsection[#:tag "functions-global"]{Global / Main}
+
+These functions and values deal with the global environment and the main loop.
+
+The following values contain the current settings for the main loop:
+
+@defthing[rs-main-bpm natural?]{
+The currently set main loop BPM.
+}
+
+@defthing[rs-main-div-length positive?]{
+The currently set main loop division length.
+}
+
+@defthing[rs-main-steps natural?]{
+The currently set number of steps in the main loop.
+}
+
+These functions can be used to alter the settings for the main loop:
+
+@defproc[(rs-set-global-bpm! [bpm natural?]) void]
+
+Set the global BPM.
+
+@defproc[(rs-set-global-div-length! [div-length positive?]) void]
+
+Set the global division length. Division length is a multiplier of the main beat length, so a division length of 1/4 means there will be one step every quarter beat.
+
+@defproc[(rs-set-global-steps! [steps natural?]) void]
+
+Set the global number of steps per iteration of the main / global loop.
+
+Use these functions to start and stop the main loop:
+
+@defproc[(rs-start-main-loop!) void]
+
+Start the main loop.
+
+@defproc[(rs-stop-main-loop!) void]
+
+Stop the main loop.
+
+@subsection[#:tag "functions-tracks"]{Tracks}
+
+These functions deal with creating, queueing and stopping tracks.
+
+Starting (queueing) and stopping tracks:
+
+@defproc[(rs-queue-track! [track rs-t?]) void]
+Enqueues the given track. It will be started on the next iteration of the main loop.
+
+@defproc[(rs-stop-track! [track-no natural?]) void]
+
+Stops the track with the supplied index. Stopping happens at the start of the next iteration of the main loop.
+
+Creating tracks:
+
+@defproc[(rs-track [sequence list?]) rs-t]
+
+Creates a new track that uses the global settings for BPM, number of steps and division length. sequence should be a list where each element is either null, an event (rs-e?) or a valid sequence.
+
+@defproc[(rs-t-create [#:bpm bpm positive?]
+                      [#:steps steps positive? 16]
+                      [#:div-length div-length positive? 1/4]
+                      [#:seq seq list? '()]) rs-t?]
+
+Creates a new track but allows you to set some (or all) of the track settings manually.
+
+@defstruct[rs-t ([bpm positive?]
+                 [steps positive?]
+                 [div-length positive?]
+                 [seq list?])]
+Represents a track. Stores tempo, number of steps and division length as well as a sequence, which is a list of elements that can be either null, an event (rs-e) or another sequence.
+
+
+@subsection[#:tag "functions-events"]{Events}
+
+Sequences consist of lists of events (null is also an event, albeit on in which nothing happens). An event in which something does happen is an rs-e structure, which combines a function to execute and an offset (which isn't used, yet, but will be in a future release).
+
+@defstruct[rs-e ([fn procedure?]
+                 [offset number?])]
+The structure that contains an event. Offset should be a number between -1 and +1 and represents how far the event will take place from its regular position in the sequence. -1 is the start of the previous item in the sequence and +1 is the start of the next item in the sequence. NOTE: offset functionality is not yet implemented. fn can be either null or a function that should accept one argument. That one argument is the length of the step on which the event is executed, in milliseconds.
+
+It's advisable to avoid creating rs-e events directly and instead use:
+
+@defproc[(rs-e-create [#:fn fn procedure?]
+                      [#:offset offset number?]) rs-e]
+Create a new event. Does sanity checking.
+
+If you want to fire off multiple events simultaneously, use:
+
+@defproc[(rs-e-multiple [procedures list?]) procedure]
+
+Creates a function that will fire off multiple event procedures at the same time (and at the same offset).
+
+@subsection[#:tag "functions-midi"]{MIDI functions}
+
+These functions can be used to work with MIDI: create MIDI events, define MIDI instruments and determine which ports are available.
+
+To check which ports are available use:
+
+@defproc[(rs-m-list-ports) list]
+
+Returns a list of available MIDI ports on your system. This list contains the names of the ports.
+
+To define a MIDI instrument use:
+
+@defproc[(rs-m-instr [port valid-midi-port?]
+                     [channel valid-midi-channel? 1])
+         rs-m-instr-struct]
+
+Creates a new MIDI instrument on the supplied MIDI port index and on the supplied MIDI channel number. It returns a struct that can be used in the MIDI event functions listed below.
+
+To create events that play MIDI notes, use these functions:
+
+@defproc[(rs-m-event-play [instr rs-m-instr-struct?]
+                          [note rs-m-valid-midi-value?]
+                          [note-length-ms natural?]
+                          [velocity rs-m-valid-midi-value? 127]
+                          [#:offset valid-offset? 0]) rs-e]
+
+Create a MIDI event for use in a sequence that plays the given note of the given length and with the given velocity using the given instrument and offset.
+
+Should you want to play your MIDI note directly instead of using it in a sequence use this function:
+
+@defproc[(rs-m-play [instr rs-m-instr-struct?]
+                    [note rs-m-valid-midi-value?]
+                    [note-length-ms natural?]
+                    [velocity rs-m-valid-midi-value? 127]) void]
+Directly play the given note for the given length using the given velocity on the given instrument.
+
+@defproc[(rs-m-event-play-chord [instr rs-m-instr-struct?]
+                                [notes rs-m-valid-notes?]
+                                [note-length-ms natural?]
+                                [velocity rs-m-valid-midi-value? 127]
+                                [#:offset valid-offset? 0]) rs-e]
+
+Returns a MIDI event for use in a sequence that plays all notes in the given list of notes simultaneously for the given amount of time, at the given velocity and using the given instrument (and at the given offset).
+
+Should you want to play your chord directly instead of using it in a sequence use this function:
+
+@defproc[(rs-m-play-chord [instr rs-m-instr-struct?]
+                          [notes rs-m-valid-notes?]
+                          [note-length-ms natural?]
+                          [velocity rs-m-valid-midi-value? 127]) void]
+
+Directly play the given notes simultaneously for the given amount of time, at the given velocity and using the given instrument.
+
+It is also possible to set MIDI cc values. Use these functions:
+
+@defproc[(rs-m-event-cc [instr rs-m-instr-struct?]
+                         [cc-no rs-m-valid-midi-value?]
+                         [cc-val rs-m-valid-midi-value?]
+                         [#:offset valid-offset? 0]) rs-e]
+Returns a MIDI event for use in a sequence that sets the given cc number to the given value for the given instrument. Supply an offset as needed.
+
+Should you want to set the cc value directly instead of doing so in a sequence
+@defproc[(rs-m-cc [instr rs-m-instr-struct?]
+                  [cc-no rs-m-valid-midi-value?]
+                  [cc-val rs-m-valid-midi-value?]) rs-e]
+
+Set the given cc number to the given value for the given instrument. Supply an offset as needed.
+
 
 @section{Changelog}
 
+* @bold{2020-05-14} Created Scribble documentation (with help from Stephen De Gabrielle because I'm a Racket noob).
 * @bold{2020-05-13} Turned rs into a package.
 
 * @bold{2020-05-12}
@@ -133,7 +298,7 @@ Have fun!
  
 * @bold{2020-05-10}
 
-*  * @bold{New feature}: Sequences within sequencesa
+*  * @bold{New feature}: Sequences within sequences
   
     You can now nest sequences, like this:
   
