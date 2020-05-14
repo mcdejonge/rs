@@ -61,12 +61,6 @@ Instructions copied and pasted from the [RtMidi documentation](https://docs.rack
 >
 > I haven’t tried the Windows build with this Makefile; you might need to make some adjustments.
 
-On a Mac, but possibly also on Linux, you may get an error about not being able to find a wrapper-rtmidi file. To fix this error, you need to modify the code of the file ```main.rkt``` in the RtMidi package (you can find out where it lives using the ```(collection-path "rtmidi")``` command you used before).
-
-Go to https://github.com/mcdejonge/rtmidi and find a modified version of ```main.rkt``` in the rtmidi directory: https://github.com/mcdejonge/rtmidi/blob/master/rtmidi/main.rkt
-
-(I've created a pull request on the original repository so maybe by the time you read this you no longer need to do this manually).
-
 ### Installing rs
 
 Installing rs itself is a simple matter of installing it using the racket package manager (raco pkg install rs) but you can also download the repository you're currently viewing somewhere.
