@@ -5,6 +5,7 @@
 (require racket/contract/base
          racket/contract/region
          racket/match
+         racket/list
          "rs-e.rkt"
          "rs-util.rkt")
 
@@ -102,7 +103,87 @@
         )
       (rs-t-calculate-loop-length track) 1/10))))
 
+;; Subtype of rs-e that has a field for the duration in ms.
+(struct rs-t-e-dur rs-e (duration) #:mutable)
+
+(define/contract (rs-t-add-duration-to-seq seq step-time-ms)
+  (-> list? positive? list?)
+  ;; Turn a list of rs-e events into a list of rs-t-e-dur events,
+  ;; setting the duration to the given step time.
+  (map (lambda (item)
+         (rs-t-e-dur (rs-e-fn item)
+                     (rs-e-offset item)
+                     step-time-ms)
+         ) seq))
+
+(define/contract (rs-t-process-offsets seq )
+  (-> list? list?)
+  ;; Process the durations of the items in a sequence of events (that
+  ;; are already turned into rs-t-e-dur events).
+
+  ;; Process all items, only looking at the second one:
+  ;; second offset 0? leave 1 and 2 unchanged.
+  ;; otherwise: add offset * time of 2 to
+  ;; 1 and subtract offset * time of 2 from 2.
+  ;;
+  ;; Once that is done, check if the very first item has an offset.
+  ;; If this offset is positive, decrease the length and add a new
+  ;; dummy event to the start of the sequence.  If this offset is
+  ;; negative, decrease the length of the last event, add the original
+  ;; first event to the end of the sequence (but give it the length of
+  ;; the offset only) and add a new dummy event to the start with the
+  ;; original length of the first item minus the offset.
+  
+  (define (process-items items)
+    (cond [(= (rs-e-offset (car (cdr items))) 0)
+           (cons (car (items)) (process-items (cdr items)))]
+          [else
+           (set-rs-t-e-dur-duration! (car items)
+                                     (+ (rs-t-e-dur-duration (car items))
+                                        (* (rs-t-e-dur-duration (car (cdr items)))
+                                           (rs-e-offset (car (cdr items))))))
+           (set-rs-t-e-dur-duration! (car (cdr items))
+                                     (- (rs-t-e-dur-duration (car (cdr items)))
+                                        (* (rs-t-e-dur-duration (car (cdr items)))
+                                           (rs-e-offset (car (cdr items))))))
+           (cons (car (items)) (process-items (cdr items)))]))
+
+  (cond [(> 1 (length seq)) seq]
+        [else 
+         (define intermediate (process-items seq))
+         (cond [(= (rs-e-offset (car intermediate)) 0) intermediate]
+               [(> (rs-e-offset (car intermediate)) 0)
+                (define new-length-start (- (rs-t-e-dur-duration (car intermediate))
+                                            (* (rs-t-e-dur-duration (car intermediate))
+                                               (abs (rs-e-offset (car intermediate))))))
+                (define length-dummy-event (- (rs-t-e-dur-duration (car intermediate))
+                                              new-length-start))
+
+                (set-rs-t-e-dur-duration! (car intermediate) new-length-start)
+                (cons (rs-t-e-dur null 0 length-dummy-event)
+                      intermediate)]
+               [(< (rs-e-offset (car intermediate)) 0)
+                (define new-length-start (- (rs-t-e-dur-duration (car intermediate))
+                                            (* (rs-t-e-dur-duration (car intermediate))
+                                               (abs (rs-e-offset (car intermediate))))))
+                (define length-dummy-event (- (rs-t-e-dur-duration (car intermediate))
+                                              new-length-start))
+
+                (set-rs-t-e-dur-duration! (last intermediate)
+                                          (- (rs-t-e-dur-duration (last intermediate))
+                                             new-length-start))
+
+                (set-rs-t-e-dur-duration! (car intermediate) new-length-start)
+                
+                (cons (rs-t-e-dur null 0 length-dummy-event)
+                      (append (cdr intermediate) (list (car intermediate))))])]))
+    
+  
+
+  
 (module+ test
+  (require rackunit)
+  (rs-util-set-diag-mode #t)
   (define (rs-t-test)
     (let* ([event1
             (rs-e-create
@@ -120,10 +201,10 @@
            [track
             (rs-t-create #:bpm 128 #:seq sequence1)])
       (define track-thread (rs-t-play! track))
-      (sleep 4)
+      (sleep 2)
       (set-rs-t-seq! track sequence2)
 
-      (sleep 4)
+      (sleep 2)
       (thread-send track-thread
                    'stop)))
   (rs-t-test)
