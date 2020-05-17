@@ -348,7 +348,11 @@
               100
               "A sequence where the first offset would result in overwriting the last item produces incorrect results.")
     ;;(rs-util-set-diag-mode #f)
-    
+
+    (validate (list e-none e-pos e-neg e-pos)
+              (list 375  150 450 225)
+              300
+              "A sequence with a different step length is processed incorrectly.")
     (validate '()
               '()
               100
