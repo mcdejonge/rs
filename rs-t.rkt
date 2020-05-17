@@ -160,11 +160,17 @@
                          (rs-t-e-dur-duration (car (cdr items))))
            (cons (car items) (process-items (cdr items)))]))
 
-  (cond [(> 1 (length seq)) seq]
-        [else 
+  (cond [(= (length seq) 0)
+         (rs-util-diag "Sequence is empty. Doing nothing.")
+         seq]
+        [else
+         (rs-util-diag "Sequence has length. Process it.\n")
          (define intermediate (process-items seq))
-         (cond [(= (rs-e-offset (car intermediate)) 0) intermediate]
+         (cond [(= (rs-e-offset (car intermediate)) 0)
+                (rs-util-diag "First item does not have an offset. No further action.\n")
+                intermediate]
                [(> (rs-e-offset (car intermediate)) 0)
+                (rs-util-diag "First item has positive offset.\n")
                 (define new-length-start (- (rs-t-e-dur-duration (car intermediate))
                                             (* (rs-t-e-dur-duration (car intermediate))
                                                (abs (rs-e-offset (car intermediate))))))
@@ -175,11 +181,14 @@
                 (cons (rs-t-e-dur null 0 length-dummy-event)
                       intermediate)]
                [(< (rs-e-offset (car intermediate)) 0)
-                (define new-length-start (- (rs-t-e-dur-duration (car intermediate))
-                                            (* (rs-t-e-dur-duration (car intermediate))
-                                               (abs (rs-e-offset (car intermediate))))))
+                (rs-util-diag "First item has negative offset.\n")
+                (define new-length-start (* (rs-t-e-dur-duration (car intermediate))
+                                            (abs (rs-e-offset (car intermediate)))))
                 (define length-dummy-event (- (rs-t-e-dur-duration (car intermediate))
                                               new-length-start))
+                (rs-util-diag "Start event is given length ~s and a dummy event with length ~s is created.\n"
+                              new-length-start
+                              length-dummy-event)
 
                 (set-rs-t-e-dur-duration! (last intermediate)
                                           (- (rs-t-e-dur-duration (last intermediate))
@@ -270,10 +279,12 @@
               100
               "A sequence starting with a positive offset produces incorrect results.")
 
+    (rs-util-set-diag-mode #t)
     (validate (list e-neg e-none e-none)
               (list 75 100 75 25)
               100
               "A sequence starting with a negative offset produces incorrect results.")
+    (rs-util-set-diag-mode #f)
 
     (validate (list e-pos e-neg e-pos e-neg)
               (list 25 50 150 50 125)
@@ -284,7 +295,13 @@
               (list 100 50 150 50 25)
               100
               "A sequence alternating negative and positive offsets produces incorrect results.")
+
+    (validate '()
+              '()
+              100
+              "Processing an empty sequence does nothing.")
     )
+  
 
   
   (rs-t-test-process-offsets)
