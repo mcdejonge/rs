@@ -153,7 +153,6 @@
         ))
   
   (define (process-items items)
-    ;; TODO multiply by step time, not by item time.
     (rs-util-diag "Processing sequence items ~s\n" items)
     (cond [(< (length items) 2) items]
           [(= (rs-e-offset (car (cdr items))) 0)
@@ -163,13 +162,13 @@
            (rs-util-diag "Second item ~s has a non-zero offset.\n" (car (cdr items)))
            (set-rs-t-e-dur-duration! (car items)
                                      (+ (rs-t-e-dur-duration (car items))
-                                        (* (rs-t-e-dur-duration (car (cdr items)))
+                                        (* step-time-ms
                                            (rs-e-offset (car (cdr items))))))
            (rs-util-diag "First item duration is now ~s\n"
                          (rs-t-e-dur-duration (car items)))
            (set-rs-t-e-dur-duration! (car (cdr items))
                                      (- (rs-t-e-dur-duration (car (cdr items)))
-                                        (* (rs-t-e-dur-duration (car (cdr items)))
+                                        (* step-time-ms
                                            (rs-e-offset (car (cdr items))))))
            (rs-util-diag "Second item duration is now ~s\n"
                          (rs-t-e-dur-duration (car (cdr items))))
