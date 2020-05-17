@@ -192,16 +192,16 @@ Represents a track. Stores tempo, number of steps and division length as well as
 
 @subsection[#:tag "functions-events"]{Events}
 
-Sequences consist of lists of events (null is also an event, albeit on in which nothing happens). An event in which something does happen is an rs-e structure, which combines a function to execute and an offset (which isn't used, yet, but will be in a future release).
+Sequences consist of lists of events (null is also an event, albeit on in which nothing happens). An event in which something does happen is an rs-e structure, which combines a function to execute and an offset (optional, defaults to 0 but can be any number between -1 and +1 which is then multiplied by the length of the step it applies to and added from the length of the step).
 
-@defstruct[rs-e ([fn procedure?]
+@defstruct[rs-e ([fn procedure-list-or-null]
                  [offset number?])]
-The structure that contains an event. Offset should be a number between -1 and +1 and represents how far the event will take place from its regular position in the sequence. -1 is the start of the previous item in the sequence and +1 is the start of the next item in the sequence. NOTE: offset functionality is not yet implemented. fn can be either null or a function that should accept one argument. That one argument is the length of the step on which the event is executed, in milliseconds.
+The structure that contains an event. Offset should be a number between -1 and +1 and represents how far the event will take place from its regular position in the sequence. -1 is the start of the previous item in the sequence and +1 is the start of the next item in the sequence. fn can be either null, a sequence (that is a list of null, events or, gasp, sequences) or a function that should accept one argument. That one argument is the length of the step on which the event is executed, in milliseconds.
 
 It's advisable to avoid creating rs-e events directly and instead use:
 
 @defproc[(rs-e-create [#:fn fn procedure?]
-                      [#:offset offset number?]) rs-e]
+                      [#:offset offset number? 0]) rs-e]
 Create a new event. Does sanity checking.
 
 If you want to fire off multiple events simultaneously, use:
@@ -282,6 +282,8 @@ Set the given cc number to the given value for the given instrument. Supply an o
 
 
 @section{Changelog}
+
+* @bold{2020-05-17} Implemented offsets.
 
 * @bold{2020-05-14} Created Scribble documentation (with help from Stephen De Gabrielle because I'm a Racket noob).
 * @bold{2020-05-13} Turned rs into a package.
