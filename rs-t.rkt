@@ -368,14 +368,26 @@
   
 
   (define (rs-t-test)
+    ;; To check if both events have run more than once, create two
+    ;; variables and let the two events increase their values. If both
+    ;; end up having a value > 1, the two events have taken place more
+    ;; than once. Best we can do, I'm afraid.
+    ;;
+    ;; This test is not fool proof. More specifically it is not thread
+    ;; safe. If for some reason the system does not get around to
+    ;; executing both events, you get a false negative.
+    (define val-event1  0)
+    (define val-event2  0)
+    
     (let* ([event1
             (rs-e-create
              #:fn (lambda (step-time)
-                    (printf "Event 1 is called with step time ~a\n" step-time)))]
+                    (set! val-event1 (+ val-event1 1))))]
            [event2
             (rs-e-create
              #:fn (lambda (step-time)
-                    (printf "Event 2 is called with step time ~a\n" step-time))
+                    ;;(printf "Executing val-event2\n")
+                    (set! val-event2 (+ val-event2 1)))
              #:offset 1/4)]
            [sequence1
             (list '() event1 '() event1 '())]
@@ -384,14 +396,19 @@
            [track
             (rs-t-create #:bpm 128 #:seq sequence1)])
       (define track-thread (rs-t-play! track))
-      (sleep 2)
+      (sleep 1)
       (set-rs-t-seq! track sequence2)
-
-      (sleep 2)
+      (sleep 3)
       (thread-send track-thread
-                   'stop)))
+                   'stop)
+      ;; (printf "val-event1 ~s and val-event2 ~s\n"
+              ;; val-event1
+              ;; val-event2)
+      (check-true (and (> val-event1 1)
+                       (> val-event2 1))
+                  "Both sequenced events did not run more than once.")))
   ;; TODO
   ;; (rs-util-set-diag-mode #f)
-  ;; (rs-t-test)
+   (rs-t-test)
   
   )
