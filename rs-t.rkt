@@ -137,8 +137,16 @@
   ;; first event to the end of the sequence (but give it the length of
   ;; the offset only) and add a new dummy event to the start with the
   ;; original length of the first item minus the offset.
+
+  ;; Before we start processing this gives us the desired step time.
+  (define step-time-ms
+    (if (> (length seq) 0)
+        (rs-t-e-dur-duration (car seq))
+        0
+        ))
   
   (define (process-items items)
+    ;; TODO multiply by step time, not by item time.
     (rs-util-diag "Processing sequence items ~s\n" items)
     (cond [(< (length items) 2) items]
           [(= (rs-e-offset (car (cdr items))) 0)
@@ -164,24 +172,35 @@
          (rs-util-diag "Sequence is empty. Doing nothing.")
          seq]
         [else
-         (rs-util-diag "Sequence has length. Process it.\n")
+         (rs-util-diag "Sequence has length. Process it (step time: ~s).\n" step-time-ms)
          (define intermediate (process-items seq))
+         (rs-util-diag "After processing sequence has item lengths ~s\n"
+                       (map rs-t-e-dur-duration intermediate))
          (cond [(= (rs-e-offset (car intermediate)) 0)
                 (rs-util-diag "First item does not have an offset. No further action.\n")
                 intermediate]
                [(> (rs-e-offset (car intermediate)) 0)
-                (rs-util-diag "First item has positive offset.\n")
+                (rs-util-diag "First item has a positive offset.\n")
+                (rs-util-diag "Applying offset ~s to first item\n"
+                             (rs-e-offset (car intermediate)))
+                (define length-dummy-event (* step-time-ms
+                                              (abs (rs-e-offset (car intermediate)))))
+
+
                 (define new-length-start (- (rs-t-e-dur-duration (car intermediate))
-                                            (* (rs-t-e-dur-duration (car intermediate))
-                                               (abs (rs-e-offset (car intermediate))))))
-                (define length-dummy-event (- (rs-t-e-dur-duration (car intermediate))
-                                              new-length-start))
+                                            length-dummy-event))
+                (rs-util-diag "Inserting dummy event of length ~s before start item with new length ~s\n"
+                              length-dummy-event
+                              new-length-start)
+
 
                 (set-rs-t-e-dur-duration! (car intermediate) new-length-start)
                 (cons (rs-t-e-dur null 0 length-dummy-event)
                       intermediate)]
                [(< (rs-e-offset (car intermediate)) 0)
                 (rs-util-diag "First item has negative offset.\n")
+                (rs-util-diag "Applying offset ~s to first item\n"
+                             (rs-e-offset (car intermediate)))
                 (define new-length-start (* (rs-t-e-dur-duration (car intermediate))
                                             (abs (rs-e-offset (car intermediate)))))
                 (define length-dummy-event (- (rs-t-e-dur-duration (car intermediate))
@@ -225,7 +244,7 @@
     (check-true (procedure? (rs-e-fn proc-null))
                 "A null 'event' does not become a function.")
     (check-equal? (procedure-arity (rs-e-fn proc-null)) 1
-                  "The function of a null 'event' does not hae arity 1.")
+                  "The function of a null 'event' does not have arity 1.")
 
     (check-true (rs-t-e-dur? proc-fn)
                 "A non-null event is not turned into an event with duration.")
@@ -279,17 +298,17 @@
               100
               "A sequence starting with a positive offset produces incorrect results.")
 
-    (rs-util-set-diag-mode #t)
     (validate (list e-neg e-none e-none)
               (list 75 100 75 25)
               100
               "A sequence starting with a negative offset produces incorrect results.")
-    (rs-util-set-diag-mode #f)
 
+    (rs-util-set-diag-mode #t)
     (validate (list e-pos e-neg e-pos e-neg)
               (list 25 50 150 50 125)
               100
               "A sequence alternating positive and negative offsets produces incorrect results.")
+    (rs-util-set-diag-mode #f)
 
     (validate (list e-neg e-pos e-neg e-pos)
               (list 100 50 150 50 25)
