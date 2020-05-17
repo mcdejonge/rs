@@ -110,11 +110,15 @@
   (-> list? positive? list?)
   ;; Turn a list of rs-e events into a list of rs-t-e-dur events,
   ;; setting the duration to the given step time.
+  ;;
+  ;; If an event is null, it is turned into an event with an empty function
   (map (lambda (item)
-         (rs-t-e-dur (rs-e-fn item)
-                     (rs-e-offset item)
-                     step-time-ms)
-         ) seq))
+         (cond [(null? item) (rs-t-e-dur (lambda (arg) void)
+                                         0
+                                         step-time-ms)]
+               [else (rs-t-e-dur (rs-e-fn item)
+                                 (rs-e-offset item)
+                                 step-time-ms)])) seq))
 
 (define/contract (rs-t-process-offsets seq )
   (-> list? list?)
@@ -183,7 +187,36 @@
   
 (module+ test
   (require rackunit)
-  (rs-util-set-diag-mode #t)
+  (rs-util-set-diag-mode #f)
+
+  (define (rs-t-test-add-duration)
+
+    (define processed (rs-t-add-duration-to-seq
+                       (list '()
+                             (rs-e-create #:fn (lambda (arg) void)))
+                       100))
+    (define proc-null (car processed))
+    (define proc-fn (car (cdr processed)))
+    
+    ;; A null event should be turned into an event.
+    (check-true (rs-t-e-dur? proc-null))
+    ;; The event a null event is turned into should have an offset of 0.
+    (check-equal? (rs-e-offset proc-null) 0)
+    ;; The function a null event is turned into should be a function.
+    (check-true (procedure? (rs-e-fn proc-null)))
+    ;; The fn of a function a null event is turned into should have arity 1
+    (check-equal? (procedure-arity (rs-e-fn proc-null)) 1)
+
+    ;; A non-null event should also be turned into an event.
+    (check-true (rs-t-e-dur? proc-fn))
+    
+    ;; Check if a duration is added.
+    (check-equal? (rs-t-e-dur-duration proc-fn) 100)
+    )
+  
+
+  (rs-t-test-add-duration)
+
   (define (rs-t-test)
     (let* ([event1
             (rs-e-create
@@ -207,6 +240,7 @@
       (sleep 2)
       (thread-send track-thread
                    'stop)))
-  (rs-t-test)
+  ;; TODO
+  ;; (rs-t-test)
   
   )
