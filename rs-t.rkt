@@ -43,66 +43,6 @@
   (rs-t bpm steps div-length seq))
 
 
-(define/contract (rs-t-calculate-loop-length track)
-  ; Return the length of a single loop of the given track in ms.
-  (-> rs-t? any)
-  (let* ([beat-length-ms (/ 60000 (rs-t-bpm track))]
-         [div-length-ms (* beat-length-ms (rs-t-div-length track))])
-    (round (* (rs-t-steps track) div-length-ms))))
-
-(define/contract (rs-t-play-seq! seq loop-length)
-  ;; Play a single iteration of a sequence during the given number of seconds.
-  ;; TODO deal with offsets.
-  (-> list? positive? void)
-  (let* ([div-length-ms (- (/ loop-length (length seq)) 0)]
-        [items-executable
-         (map (lambda (item)
-                (cond [(rs-e? item)
-                       (lambda () ((rs-e-fn item) div-length-ms))]
-                      [(and (list? item) (> (length item) 0))
-                       (lambda ()
-                         (rs-util-diag "Encountered sub sequence of ~s items\n" (lambda ()
-                                                                                  (length item)))
-                         (rs-t-play-seq! item div-length-ms))]
-                      [else (void)])) seq)])
-    (rs-util-loop-and-wait items-executable div-length-ms 1/10))
-  (void))
-  
-(define/contract (rs-t-play-single-loop! track loop-length)
-  ; Play a single iteration of the main sequence for the track.
-  (-> rs-t? positive? void)
-  (rs-t-play-seq! (rs-t-seq track) loop-length))
-    
-    
-
-(define (event-or-null? input)
-  ; Check if something is an event (see rs-e) or null.
-  (or (rs-e? input) (null? input)))
-
-(define (rs-t-play! track)
-  (-> rs-t? thread?)
-  ; Return a thread that plays continuously until it receives a 'stop message.
-  (rs-util-diag "Creating a new thread for playing thread ~s\n" track)
-  (thread
-   (lambda ()
-     (rs-util-loop-and-wait
-      (lambda ()
-        (collect-garbage 'minor)
-        (thread (lambda ()
-                  (rs-t-play-single-loop! track (rs-t-calculate-loop-length track))))
-        (match (thread-try-receive)
-          ; If all you want to do is change the sequence, you do not
-          ; need to send a new track as the new sequence is picked upu
-          ; automatically. You only need this if you want to replace
-          ; the currently running track with another.
-          [(? rs-t? new-track-info)
-           (set! track new-track-info)
-           #t]
-          [ 'stop #f]
-          [ #f #t])
-        )
-      (rs-t-calculate-loop-length track) 1/10))))
-
 ;; Subtype of rs-e that has a field for the duration in ms.
 (struct rs-t-e-dur rs-e (duration) #:mutable)
 
@@ -112,13 +52,21 @@
   ;; setting the duration to the given step time.
   ;;
   ;; If an event is null, it is turned into an event with an empty function
+  ;; If an event is a list (sub sequence) it is embedded in an rs-t-e-dur event.
   (map (lambda (item)
-         (cond [(null? item) (rs-t-e-dur (lambda (arg) void)
-                                         0
+         (cond [(and (list? item)
+                     (not (null? item)))
+                (rs-t-e-dur item
+                            0
+                            step-time-ms)]
+               
+               [(rs-e? item) (rs-t-e-dur (rs-e-fn item)
+                                         (rs-e-offset item)
                                          step-time-ms)]
-               [else (rs-t-e-dur (rs-e-fn item)
-                                 (rs-e-offset item)
-                                 step-time-ms)])) seq))
+               [else (rs-t-e-dur (lambda (arg) void)
+                                 0
+                                 step-time-ms)
+                     ])) seq))
 
 (define/contract (rs-t-process-offsets seq )
   (-> list? list?)
@@ -242,7 +190,84 @@
                 (cons (rs-t-e-dur null 0 length-dummy-event)
                       (append (cdr intermediate) (list (car intermediate))))])]))
     
-  
+  (define/contract (rs-t-calculate-loop-length track)
+  ; Return the length of a single loop of the given track in ms.
+  (-> rs-t? any)
+  (let* ([beat-length-ms (/ 60000 (rs-t-bpm track))]
+         [div-length-ms (* beat-length-ms (rs-t-div-length track))])
+    (round (* (rs-t-steps track) div-length-ms))))
+
+(define/contract (rs-t-calc-step-time-corrected step last-diff)
+  (-> rs-t-e-dur? number? positive?)
+  ;; Calculate the step time for a step taking into account its proper
+  ;; step time and the difference of the last step.
+  ;; The difference will never be bigger than max-difference.
+  (define max-diff-ratio 1/10) ; Change if needed.
+
+  (define step-pref-length (rs-t-e-dur-duration step))
+  (define max-diff (* (rs-t-e-dur-duration step) max-diff-ratio))
+  (define min-step-length (- step-pref-length max-diff))
+  (define max-step-length (+ step-pref-length max-diff))
+  (max min-step-length (min (- last-diff step-pref-length) max-step-length)))
+
+(define/contract (rs-t-play-seq! seq loop-length)
+  ;; Play a single iteration of a sequence during the given number of seconds.
+  (-> list? positive? void)
+  (define step-length-ms (/ loop-length (length seq)))
+  (define seq-playable
+    (rs-t-process-offsets
+     (rs-t-add-duration-to-seq seq step-length-ms)))
+  (for/fold ([last-diff 0])
+            ([step seq-playable])
+    (define corrected-step-length (rs-t-calc-step-time-corrected step last-diff))
+    (rs-util-run-timed-ms
+     (cond [(procedure? (rs-e-fn step))
+           (lambda() ((rs-e-fn step) corrected-step-length))]
+          [(and (list? (rs-e-fn step))
+                (> (length (rs-e-fn step)) 0))
+           (lambda()
+             (rs-util-diag "Encountered sub sequence of ~s items\n" (length (rs-e-fn step)))
+             (rs-t-play-seq! (rs-e-fn step) corrected-step-length))]
+          [else (void)]))))
+ 
+(define/contract (rs-t-play-single-loop! track loop-length)
+  ;; Play a single iteration of the main sequence for the track.
+  ;; Separated out into a function to load the current sequence from
+  ;; the track at the start of every iteration.
+  (-> rs-t? positive? void)
+  (rs-t-play-seq! (rs-t-seq track) loop-length))
+    
+    
+
+(define (event-or-null? input)
+  ; Check if something is an event (see rs-e) or null.
+  (or (rs-e? input) (null? input)))
+
+(define (rs-t-play! track)
+  (-> rs-t? thread?)
+  ; Return a thread that plays continuously until it receives a 'stop message.
+  (rs-util-diag "Creating a new thread for playing thread ~s\n" track)
+  (thread
+   (lambda ()
+     (rs-util-loop-and-wait
+      (lambda ()
+        (collect-garbage 'minor)
+        (thread (lambda ()
+                  (rs-t-play-single-loop! track (rs-t-calculate-loop-length track))))
+        (match (thread-try-receive)
+          ; If all you want to do is change the sequence, you do not
+          ; need to send a new track as the new sequence is picked upu
+          ; automatically. You only need this if you want to replace
+          ; the currently running track with another.
+          [(? rs-t? new-track-info)
+           (set! track new-track-info)
+           #t]
+          [ 'stop #f]
+          [ #f #t])
+        )
+      (rs-t-calculate-loop-length track) 1/10))))
+
+
 
   
 (module+ test

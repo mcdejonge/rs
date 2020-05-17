@@ -11,12 +11,12 @@
 
 (struct rs-e (fn offset) #:mutable #:transparent)
 
-; There is probably another way to check if something is null or a
+; There is probably another way to check if something is null, a list or a
 ; procedure in a contract but I couldn't (quickly) figure out how. So
 ; use a helper function. TODO extract this sort of stuff into an util file.
-(define (procedure-or-null? input)
+(define (procedure-list-or-null? input)
   ; Check if something is a procedure or null.
-  (or (procedure? input) (null? input)))
+  (or (procedure? input) (null? input) (list? input)))
 
 (define (list-of-event-procs? input)
   ; Check if something is a list of procedures.
@@ -34,7 +34,7 @@
 (define/contract (rs-e-create #:fn fn #:offset [offset 0])
   ; Create an event struct with a function to run (or null) and an
   ; optional offset (between -1 and +1)
-  (->* (#:fn procedure-or-null?)
+  (->* (#:fn procedure-list-or-null?)
         (#:offset offset-valid?)
        rs-e?)
   (rs-e fn offset))

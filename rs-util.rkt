@@ -13,6 +13,7 @@
  rs-util-diag
  rs-util-set-diag-mode
  rs-util-loop-and-wait
+ rs-util-run-timed-ms
  )
 
 
@@ -81,7 +82,13 @@
 
 (define (list-or-procedure? input)
   (or (list? input) (procedure? input)))
-  
+
+(define (rs-util-run-timed-ms proc)
+  ;; Run a procedure and return the time it took.
+  (define now (current-inexact-milliseconds))
+  (proc)
+  (- (current-inexact-milliseconds) now))
+
 (define (rs-util-loop-and-wait list-or-procedure loop-length max-difference)
   ;; Loop the supplied procedure or list of procedures and wait for the given number of ms.
   ;; Attempts to correct the time to wait based on the duration of the
