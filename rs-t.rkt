@@ -137,6 +137,13 @@
   ;; first event to the end of the sequence (but give it the length of
   ;; the offset only) and add a new dummy event to the start with the
   ;; original length of the first item minus the offset.
+  ;;
+  ;; Some special processing has to happen if the first item has such
+  ;; a large offset that it would overlap with the last item (which
+  ;; can happen after processing). In that case, set the last item to
+  ;; 0.1 the regular length of a step and set the first item to it's
+  ;; desired length minus 0.1 the regular length of a step.
+  
 
   ;; Before we start processing this gives us the desired step time.
   (define step-time-ms
@@ -198,22 +205,40 @@
                 (cons (rs-t-e-dur null 0 length-dummy-event)
                       intermediate)]
                [(< (rs-e-offset (car intermediate)) 0)
-                (rs-util-diag "First item has negative offset.\n")
-                (rs-util-diag "Applying offset ~s to first item\n"
-                             (rs-e-offset (car intermediate)))
-                (define new-length-start (* (rs-t-e-dur-duration (car intermediate))
-                                            (abs (rs-e-offset (car intermediate)))))
-                (define length-dummy-event (- (rs-t-e-dur-duration (car intermediate))
-                                              new-length-start))
+                (rs-util-diag "First item has a negative offset.\n")
+                (define offset-time (* (abs (rs-e-offset (car intermediate))) step-time-ms))
+                (define first-step-time (rs-t-e-dur-duration (car intermediate)))
+                (rs-util-diag "Applying offset ~s to first item of length ~s\n"
+                              offset-time
+                              first-step-time)
+
+                (define new-first-step-time offset-time)
+                (define length-dummy-event (- first-step-time offset-time))
+                (when (< first-step-time offset-time)
+                  (rs-util-diag "Offset is larger than step time.\n")
+                  (set! length-dummy-event first-step-time)
+                  (set! first-step-time offset-time))
+                
                 (rs-util-diag "Start event is given length ~s and a dummy event with length ~s is created.\n"
-                              new-length-start
+                              new-first-step-time
                               length-dummy-event)
 
-                (set-rs-t-e-dur-duration! (last intermediate)
-                                          (- (rs-t-e-dur-duration (last intermediate))
-                                             new-length-start))
-
-                (set-rs-t-e-dur-duration! (car intermediate) new-length-start)
+                (define new-length-last-item (- (rs-t-e-dur-duration (last intermediate))
+                                                new-first-step-time))
+                (rs-util-diag "Last event length is reduced from ~s to ~s\n"
+                              (rs-t-e-dur-duration (last intermediate))
+                              new-length-last-item)
+                (when (< new-length-last-item (* 0.1 step-time-ms))
+                  (rs-util-diag "Last event is too short. Setting it to minimum length.\n")
+                  (set! new-length-last-item (* 0.1 step-time-ms))
+                  (set! new-first-step-time (- new-first-step-time
+                                               new-length-last-item))
+                  (rs-util-diag "After adjustment last item has length ~s and first item ~s\n"
+                                new-length-last-item
+                                new-first-step-time))
+                (set-rs-t-e-dur-duration! (last intermediate) new-length-last-item)
+                                          
+                (set-rs-t-e-dur-duration! (car intermediate) new-first-step-time)
                 
                 (cons (rs-t-e-dur null 0 length-dummy-event)
                       (append (cdr intermediate) (list (car intermediate))))])]))
@@ -303,18 +328,28 @@
               100
               "A sequence starting with a negative offset produces incorrect results.")
 
-    (rs-util-set-diag-mode #t)
     (validate (list e-pos e-neg e-pos e-neg)
               (list 25 50 150 50 125)
               100
               "A sequence alternating positive and negative offsets produces incorrect results.")
-    (rs-util-set-diag-mode #f)
 
     (validate (list e-neg e-pos e-neg e-pos)
               (list 100 50 150 50 25)
               100
               "A sequence alternating negative and positive offsets produces incorrect results.")
 
+    (define e-neg2 (rs-e-create #:fn (lambda (x) void) #:offset -0.99))
+    (validate (list e-neg e-neg2 e-pos)
+              (list 1.0 224.0 50 25)
+              100
+              "A sequence where the first item is shorter than its negative offset produces incorrect results.")
+    ;;(rs-util-set-diag-mode #t)
+    (validate (list e-neg2 e-neg2 e-pos)
+              (list 1.0 224.0 10.0 89.0)
+              100
+              "A sequence where the first offset would result in overwriting the last item produces incorrect results.")
+    ;;(rs-util-set-diag-mode #f)
+    
     (validate '()
               '()
               100
