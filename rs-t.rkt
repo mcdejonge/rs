@@ -139,18 +139,26 @@
   ;; original length of the first item minus the offset.
   
   (define (process-items items)
-    (cond [(= (rs-e-offset (car (cdr items))) 0)
-           (cons (car (items)) (process-items (cdr items)))]
+    (rs-util-diag "Processing sequence items ~s\n" items)
+    (cond [(< (length items) 2) items]
+          [(= (rs-e-offset (car (cdr items))) 0)
+           (rs-util-diag "Second item ~s has no offset.\n" (car (cdr items)))
+           (cons (car items) (process-items (cdr items)))]
           [else
+           (rs-util-diag "Second item ~s has a non-zero offset.\n" (car (cdr items)))
            (set-rs-t-e-dur-duration! (car items)
                                      (+ (rs-t-e-dur-duration (car items))
                                         (* (rs-t-e-dur-duration (car (cdr items)))
                                            (rs-e-offset (car (cdr items))))))
+           (rs-util-diag "First item duration is now ~s\n"
+                         (rs-t-e-dur-duration (car items)))
            (set-rs-t-e-dur-duration! (car (cdr items))
                                      (- (rs-t-e-dur-duration (car (cdr items)))
                                         (* (rs-t-e-dur-duration (car (cdr items)))
                                            (rs-e-offset (car (cdr items))))))
-           (cons (car (items)) (process-items (cdr items)))]))
+           (rs-util-diag "Second item duration is now ~s\n"
+                         (rs-t-e-dur-duration (car (cdr items))))
+           (cons (car items) (process-items (cdr items)))]))
 
   (cond [(> 1 (length seq)) seq]
         [else 
@@ -190,32 +198,101 @@
   (rs-util-set-diag-mode #f)
 
   (define (rs-t-test-add-duration)
-
+    ;; Tests for the rs-t-add-duration-to-seq function.
     (define processed (rs-t-add-duration-to-seq
                        (list '()
                              (rs-e-create #:fn (lambda (arg) void)))
                        100))
     (define proc-null (car processed))
     (define proc-fn (car (cdr processed)))
-    
-    ;; A null event should be turned into an event.
-    (check-true (rs-t-e-dur? proc-null))
-    ;; The event a null event is turned into should have an offset of 0.
-    (check-equal? (rs-e-offset proc-null) 0)
-    ;; The function a null event is turned into should be a function.
-    (check-true (procedure? (rs-e-fn proc-null)))
-    ;; The fn of a function a null event is turned into should have arity 1
-    (check-equal? (procedure-arity (rs-e-fn proc-null)) 1)
 
-    ;; A non-null event should also be turned into an event.
-    (check-true (rs-t-e-dur? proc-fn))
+    (check-equal? (length processed) 2
+                  "The length of a processed sequence is incorrect.")
     
-    ;; Check if a duration is added.
-    (check-equal? (rs-t-e-dur-duration proc-fn) 100)
-    )
-  
+    (check-true (rs-t-e-dur? proc-null)
+                "A null 'event' is not turned into an event.")
+    (check-equal? (rs-e-offset proc-null) 0
+                  "The offset of a null 'event' is not 0.")
+    (check-true (procedure? (rs-e-fn proc-null))
+                "A null 'event' does not become a function.")
+    (check-equal? (procedure-arity (rs-e-fn proc-null)) 1
+                  "The function of a null 'event' does not hae arity 1.")
 
+    (check-true (rs-t-e-dur? proc-fn)
+                "A non-null event is not turned into an event with duration.")
+    
+    (check-equal? (rs-t-e-dur-duration proc-fn) 100
+                  "A (correct) duration is not added."))
   (rs-t-test-add-duration)
+
+  (define (rs-t-test-process-offsets)
+    ;; Tests for the rs-t-process-offsets function.
+
+    (define e-none (rs-e-create #:fn (lambda (x) void)))
+    (define e-neg (rs-e-create #:fn (lambda (x) void) #:offset -1/4))
+    (define e-pos (rs-e-create #:fn (lambda (x) void) #:offset 1/4))
+    
+    ;; Test sequences without offsets.
+    (define seq-no-offset
+      (rs-t-process-offsets
+       (rs-t-add-duration-to-seq (list '() e-none '() e-none) 100)))
+    
+    (check-true (and (= (rs-t-e-dur-duration (car seq-no-offset)) 100)
+                     (= (rs-t-e-dur-duration (car (cdr seq-no-offset))) 100)
+                     (= (rs-t-e-dur-duration (car (cdr (cdr seq-no-offset)))) 100)
+                     (= (rs-t-e-dur-duration (car (cdr (cdr (cdr seq-no-offset)))))100))
+                "A sequence without offsets does not have correct durations.")
+
+    (define (validate seq lengths step-time-ms msg)
+      ;; Helper function for testing the outcomes of various configurations.
+      (check-equal?
+       (map rs-t-e-dur-duration
+            (rs-t-process-offsets (rs-t-add-duration-to-seq seq step-time-ms)))
+       lengths msg))
+
+    (validate (list e-none e-neg e-neg e-none)
+              (list 75 100 125 100)
+              100
+              "A sequence with negative offsets in the middle produces incorrect results.")
+    
+    (validate (list e-none e-pos e-pos e-none)
+              (list 125 100 75 100)
+              100
+              "A sequence with positive offsets in the middle produces incorrect results.")
+
+    (validate (list e-none e-neg e-pos e-neg)
+              (list 75 125 50 125)
+              100
+              "A sequence alternating negative and positive offsets in the middle produces incorrect results.")
+
+    ;;(rs-util-set-diag-mode #t)
+    (validate (list e-pos e-none e-none)
+              (list 25 75 100 100)
+              100
+              "A sequence starting with a positive offset produces incorrect results.")
+
+    (validate (list e-neg e-none e-none)
+              (list 100 100 75 25)
+              100
+              "A sequence starting with a negative offset produces incorrect results.")
+
+    (validate (list e-pos e-neg e-pos e-neg)
+              (list 25 50 150 50 125)
+              100
+              "A sequence alternating positive and negative offsets produces incorrect results.")
+
+    (validate (list e-neg e-pos e-neg e-pos)
+              (list 100 50 150 50 25)
+              100
+              "A sequence alternating negative and positive offsets produces incorrect results.")
+    )
+
+  
+  (rs-t-test-process-offsets)
+
+
+
+  
 
   (define (rs-t-test)
     (let* ([event1
@@ -241,6 +318,7 @@
       (thread-send track-thread
                    'stop)))
   ;; TODO
+  ;; (rs-util-set-diag-mode #f)
   ;; (rs-t-test)
   
   )
