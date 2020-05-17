@@ -91,7 +91,8 @@
                    (> offset -1)
                    (< offset 1)))
          (rs-e-create #:fn (lambda (step-time)
-                        (rs-m-play-chord instr notes note-length-ms velocity)))]
+                             (rs-m-play-chord instr notes note-length-ms velocity))
+                      #:offset offset)]
         [else (printf "Invalid arguments supplied to rs-m-event-play-chord : ~a ~a ~a ~a offset ~a\n"
                       instr notes note-length-ms velocity offset)]))
 
@@ -120,7 +121,8 @@
                    (> offset -1)
                    (< offset 1)))
          (rs-e-create #:fn (lambda (step-time)
-                        (rs-m-play instr note note-length-ms velocity)))]
+                             (rs-m-play instr note note-length-ms velocity))
+                      #:offset offset)]
         [else (printf "Invalid arguments supplied to rs-m-event-play: ~a ~a ~a ~a offset ~a\n"
                       instr note note-length-ms velocity offset)]))
 
@@ -144,7 +146,8 @@
                    (> offset -1)
                    (< offset 1)))
          (rs-e-create #:fn (lambda (step-time)
-                        (rs-m-cc instr cc-no cc-val)))]
+                             (rs-m-cc instr cc-no cc-val))
+                      #:offset offset)]
         [else (printf "Invalid arguments supplied to rs-m-event-cc: ~a ~a ~a offset ~a\n"
                       instr cc-no cc-val offset)]))
 

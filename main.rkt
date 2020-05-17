@@ -53,8 +53,12 @@
  (struct-out rs-t)
  rs-t-create
 
- )
+ ; From rs-util.rkt
+ rs-util-diag
+ rs-util-set-diag-mode
 
+
+ )
 
 (define rs-main-loop '())
 

@@ -208,7 +208,7 @@
   (define max-diff (* (rs-t-e-dur-duration step) max-diff-ratio))
   (define min-step-length (- step-pref-length max-diff))
   (define max-step-length (+ step-pref-length max-diff))
-  (max min-step-length (min (- last-diff step-pref-length) max-step-length)))
+  (max min-step-length (min (- step-pref-length last-diff) max-step-length)))
 
 (define/contract (rs-t-play-seq! seq loop-length)
   ;; Play a single iteration of a sequence during the given number of seconds.
@@ -217,18 +217,24 @@
   (define seq-playable
     (rs-t-process-offsets
      (rs-t-add-duration-to-seq seq step-length-ms)))
+  (rs-util-diag "Playing sequence ~s for loop length ~s and step time ~s.\n"
+                seq-playable loop-length step-length-ms)
   (for/fold ([last-diff 0])
             ([step seq-playable])
     (define corrected-step-length (rs-t-calc-step-time-corrected step last-diff))
-    (rs-util-run-timed-ms
-     (cond [(procedure? (rs-e-fn step))
-           (lambda() ((rs-e-fn step) corrected-step-length))]
-          [(and (list? (rs-e-fn step))
-                (> (length (rs-e-fn step)) 0))
-           (lambda()
-             (rs-util-diag "Encountered sub sequence of ~s items\n" (length (rs-e-fn step)))
-             (rs-t-play-seq! (rs-e-fn step) corrected-step-length))]
-          [else (void)]))))
+    (rs-util-diag "Playing step ~s for time ~s\n" step corrected-step-length)
+    (- (rs-util-run-timed-ms
+        (cond [(procedure? (rs-e-fn step))
+               (lambda() ((rs-e-fn step) corrected-step-length)
+                      (rs-util-rtsleep corrected-step-length))]
+              [(and (list? (rs-e-fn step))
+                    (> (length (rs-e-fn step)) 0))
+               (lambda()
+                 (rs-util-diag "Encountered sub sequence of ~s items\n" (length (rs-e-fn step)))
+                 (rs-t-play-seq! (rs-e-fn step) corrected-step-length)
+                 (rs-util-rtsleep corrected-step-length))]
+              [else (rs-util-rtsleep corrected-step-length)]))
+       step-length-ms)))
  
 (define/contract (rs-t-play-single-loop! track loop-length)
   ;; Play a single iteration of the main sequence for the track.
