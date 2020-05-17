@@ -261,18 +261,17 @@
               "A sequence with positive offsets in the middle produces incorrect results.")
 
     (validate (list e-none e-neg e-pos e-neg)
-              (list 75 125 50 125)
+              (list 75 150 50 125)
               100
               "A sequence alternating negative and positive offsets in the middle produces incorrect results.")
 
-    ;;(rs-util-set-diag-mode #t)
     (validate (list e-pos e-none e-none)
               (list 25 75 100 100)
               100
               "A sequence starting with a positive offset produces incorrect results.")
 
     (validate (list e-neg e-none e-none)
-              (list 100 100 75 25)
+              (list 75 100 75 25)
               100
               "A sequence starting with a negative offset produces incorrect results.")
 
