@@ -166,9 +166,9 @@ Starting (queueing) and stopping tracks:
 @defproc[(rs-queue-track! [track rs-t?]) void]
 Enqueues the given track. It will be started on the next iteration of the main loop.
 
-@defproc[(rs-stop-track! [track-no natural?]) void]
+@defproc[(rs-stop-track! [track natural-or-track?]) void]
 
-Stops the track with the supplied index. Stopping happens at the start of the next iteration of the main loop.
+Stops the given track, which can by either an rs-t struct or an index (useful when you want to stop the last track you started or somesuch). Stopping happens at the start of the next iteration of the main loop.
 
 Creating tracks:
 

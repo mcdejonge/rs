@@ -81,15 +81,17 @@
 (define rs-main-steps 16)
 
 
-; A list of track threads.
+(struct rs-main-running-track (track track-thread))
+
+;; A list of rs-main-running-track structs.
 (define rs-main-tracks-running '())
 
-; These tracks will start at the next loop start.
-; Contains a list of rs-t structs.
+;; These tracks will start at the next loop start.
+;; Contains a list of rs-t structs.
 (define rs-main-tracks-queued '())
 
-; These tracks will stop at the next loop start.
-; Contains a list of indexes
+;l These tracks will stop at the next loop start.
+;; Contains a list of rs-t structs.
 (define rs-main-tracks-stopping '())
 
 (define rs-main-loop-time-in-msecs 0) ; Keep times in msecs as long as possible to avoid doing floating point math.
@@ -98,11 +100,6 @@
   (set! rs-main-loop-time-in-msecs
         (/ 60000 rs-main-bpm)))
 (rs-main-recalculate-loop-length!)
-
-;; TODO contracts may seem nice, but they cause the program to stop,
-;; which is not what you want in a sequencer. For public functions
-;; just output an error message, refuse to do something stupid and
-;; continue.
 
 (define/contract (rs-set-global-steps! steps)
   (-> natural? void)
@@ -122,20 +119,43 @@
 
 (define/contract (rs-queue-track! track)
   (-> rs-t? void)
-  ; Add the given track to the list of tracks to enqueue.
+  ;; Add the given track to the list of tracks to enqueue.
   (rs-util-diag "Queueing track ~s\n" track)
   (set! rs-main-tracks-queued (cons track rs-main-tracks-queued)))
 
-(define/contract (rs-stop-track! track-no)
-  (-> natural? void)
-  (rs-util-diag "Stopping the track with index ~s\n" track-no)
-  ; Add the given index to the list of indexes to stop
-  ; at the next main loop iteration start.
-  (when (< track-no (length rs-main-tracks-running))
-    (when (not (member track-no rs-main-tracks-stopping))
-      (set! rs-main-tracks-stopping (cons track-no rs-main-tracks-stopping)))))
+(define (track-or-index? arg)
+  ;; Helper function that checks if something is either a track or an
+  ;; index.
+  (or (rs-t? arg)
+      (natural? arg)))
 
+(define (get-running-track track search-list)
+  ;; Return the rs-main-running-track struct matching the given track (rs-t). Or nothing.
+  (cond [(null? search-list) null]
+        [(eq? track (rs-main-running-track-track (car search-list)))
+         (car search-list)]
+        [else (get-running-track track (cdr search-list))]))
 
+(define/contract (rs-stop-track! track)
+  (-> track-or-index? void)
+  ;; Stop the given track. The track can be either a track index or
+  ;; the track itself.
+  (rs-util-diag "Stopping track ~s\n" track)
+  (cond [(and (natural? track)
+              (< track (length rs-main-tracks-running)))
+         (define running-track (list-ref rs-main-tracks-running track))
+         (when (not (member running-track rs-main-tracks-stopping))
+           (set! rs-main-tracks-stopping
+                 (cons running-track rs-main-tracks-stopping)))]
+        [(rs-t? track)
+         (define running-track (get-running-track track rs-main-tracks-running))
+         (when (and (not (null? running-track))
+                    (not (member running-track rs-main-tracks-stopping)))
+           (set! rs-main-tracks-stopping
+                 (cons running-track rs-main-tracks-stopping)))]
+        [else (raise "No such track.")])
+  (void))
+  
 (define (rs-track sequence)
   ; Create a new track that uses the main settings for BPM and divisions.
   (-> rs-t-valid-sequence? rs-t?)
@@ -163,9 +183,11 @@
                (lambda()
                  (start-atomic)
                  (for ([track rs-main-tracks-queued])
-                   (let ((track-thread (rs-t-play! track)))
-                     (set! rs-main-tracks-running
-                           (append rs-main-tracks-running (list track-thread)))))
+                   (set! rs-main-tracks-running
+                         ;; Use append to its easier to deactive threads by index.
+                         (append rs-main-tracks-running
+                                 (list
+                                  (rs-main-running-track track (rs-t-play! track))))))
                  (set! rs-main-tracks-queued '())
                  (end-atomic)
                  ))
@@ -173,10 +195,10 @@
               (thread
                (lambda ()
                  (start-atomic)
-                 (for ([track-index rs-main-tracks-stopping])
-                   (let ((track-to-stop (list-ref rs-main-tracks-running track-index)))
-                     (set! rs-main-tracks-running (remove track-to-stop rs-main-tracks-running))
-                     (thread-send track-to-stop 'stop)))
+                 (for ([track-to-stop rs-main-tracks-stopping])
+                   (thread-send (rs-main-running-track-track-thread track-to-stop) 'stop))
+                 (set! rs-main-tracks-running
+                       (remq* rs-main-tracks-stopping rs-main-tracks-running))
                  (set! rs-main-tracks-stopping '())
                  (end-atomic)))
 
@@ -190,8 +212,8 @@
 (define (rs-stop-main-loop!)
   ; Stops the main loop and all running tracks.
   (rs-util-diag "Stopping maing loop.\n")
-  (for ([track-thread rs-main-tracks-running])
-    (thread-send track-thread 'stop))
+  (for ([running-track rs-main-tracks-running])
+    (thread-send (rs-main-running-track-track-thread running-track) 'stop))
   (set! rs-main-tracks-running '())
   (kill-thread rs-main-loop))
 
