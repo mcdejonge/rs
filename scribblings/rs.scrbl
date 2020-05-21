@@ -232,11 +232,11 @@ To create events that play MIDI notes, use these functions:
 
 @defproc[(rs-m-event-play [instr rs-m-instr-struct?]
                           [note rs-m-valid-midi-value?]
-                          [note-length-ms natural?]
+                          [note-length-ms natural? 0]
                           [velocity rs-m-valid-midi-value? 127]
                           [#:offset valid-offset? 0]) rs-e]
 
-Create a MIDI event for use in a sequence that plays the given note of the given length and with the given velocity using the given instrument and offset.
+Create a MIDI event for use in a sequence that plays the given note of the given length and with the given velocity using the given instrument and offset. If note-length-ms is 0 (the default) the note will play for the length of the step.
 
 Should you want to play your MIDI note directly instead of using it in a sequence use this function:
 
@@ -248,11 +248,11 @@ Directly play the given note for the given length using the given velocity on th
 
 @defproc[(rs-m-event-play-chord [instr rs-m-instr-struct?]
                                 [notes rs-m-valid-notes?]
-                                [note-length-ms natural?]
+                                [note-length-ms natural? 0]
                                 [velocity rs-m-valid-midi-value? 127]
                                 [#:offset valid-offset? 0]) rs-e]
 
-Returns a MIDI event for use in a sequence that plays all notes in the given list of notes simultaneously for the given amount of time, at the given velocity and using the given instrument (and at the given offset).
+Returns a MIDI event for use in a sequence that plays all notes in the given list of notes simultaneously for the given amount of time, at the given velocity and using the given instrument (and at the given offset). If note-length-ms is 0 (the default) the note will play for the length of the step.
 
 Should you want to play your chord directly instead of using it in a sequence use this function:
 
@@ -288,59 +288,39 @@ Set the given cc number to the given value for the given instrument. Supply an o
 
 Pause (ie sleep) for the given number of beats and steps. Loop length and step length are calculated based on the global settings. The number of steps can be a fraction, so (rs-pause 2 1/4) would pause for two full loops and a quarter of a step / division length (meaning if the division length is 1/4 this would be two full loops and 1/16 of a beat).
 
-@defproc[(rs-util-diag [message]
-                       [args]) void]
+@defproc[(rs-util-diag [message string?]
+                       [message-args string?]) void]
 
 Print a diagnostic message, but only if rs-util-diag-mode (see below) is #t. args are inserted into the message. Printing is done using printf. Basically this is a printf that only runs when diagnostic mode is activated.
 
 NOTE: if you need to perform a function call in one of your args, make sure it only happens when diag-mode is #t, in other words supply a procedure object rather than the result of a procedure call. If you do not do this, performance will suffer greatly as your procedure calls will also be executed if they don't need to be (namely when diag-mode is #f).
 
 
-@defproc [(rs-util-set-diag-mode [mode true-or-false]) void]
+@defproc[(rs-util-set-diag-mode [diag-mode true-or-false?]) void]
 
 Activate (true-or-false is #t) or deactivate (true-or-false is #f) diagnostic mode. Diagnostic mode is #f by default. When #t it prints out a *lot* of messages.
 
 @section{Changelog}
 
-* @bold{2020-05-17} Implemented offsets.
-
-* @bold{2020-05-14} Created Scribble documentation (with help from Stephen De Gabrielle because I'm a Racket noob).
-* @bold{2020-05-13} Turned rs into a package.
-
-* @bold{2020-05-12}
-
-*  * @bold{New feature}: chords
-  
-    Use rs-m-play-chord and rs-m-event-play-chord to play multiple notes simultaneously on the same instrument:
-    
-@racketblock[
-  (define chord (rs-m-event-play-chord instr (list 60 65 69)))
-]
-  
-*  * Added polyrhythm demo.
- 
-* @bold{2020-05-10}
-
-*  * @bold{New feature}: Sequences within sequences
-  
-    You can now nest sequences, like this:
-  
-@racketblock[
-  (define hihats (list hc
-                       ho
-                       hc
-                       (list hh hh hh)))
-]
-    
-    A new demo, rs-demo-drums.rkt shows off this feature.
-
-*  * Timing code has been slimmed down, which hopefully increases performance.
-
-*  * rs-util.rkt now exposes (rs-util-set-diag-mode #t|#f) and (rs-util-diag message .args ) so you can have an idea about what rs is doing.
-
-*  * Demos have been put into a separate directory.
-
-* @bold{2020-05-03} Some cleanup of the demos
-
-* @bold{2020-05-01} Initial release
-
+@itemlist[
+    @item{@bold{2020-05-11}
+        @itemlist[
+            @item{When supplied a note length of 0 (the default) rs-m-event-play and rs-m-event-play-chord will play for the duration of the step.}
+            @item{Added rs-pause function.}
+            @item{Some code cleanup.}
+            @item{Cleaned up documentation.}]}
+    @item{@bold{2020-05-17} Implemented offsets.}
+    @item{@bold{2020-05-14} Created Scribble documentation (with help from Stephen De Gabrielle because I'm a Racket noob).}
+    @item{@bold{2020-05-13} Turned rs into a package.}
+    @item{@bold{2020-05-12}
+        @itemlist[
+            @item{@bold{New feature}: chords}
+            @item{Added polyrhythm demo.}]}
+    @item{@bold{2020-05-10}
+        @itemlist[
+            @item{@bold{New feature}: sequences within sequences. A new demo, rs-demo-drums.rkt, shows off this feature.}
+            @item{Timing code has been slimmed down, which hopefully increases performance.}
+            @item{rs-util.rkt now exposes (rs-util-set-diag-mode #t|#f) and (rs-util-diag message . args) so you can have an idea what rs is doing.}
+            @item{Demos have been put in a separate directory.}]}
+    @item{@bold{2020-05-03} Some cleanup of the demos.}
+    @item{@bold{2020-05-01} Initial release}]
