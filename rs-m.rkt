@@ -2,7 +2,9 @@
 
 ;; This module contains functions for sending MIDI notes to instruments.
 
-(require racket/math
+(require racket/contract/base
+         racket/contract/region
+         racket/math
          "rs-e.rkt"
          "rs-midi-core.rkt")
 
@@ -68,15 +70,13 @@
 ;;                                                                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (rs-m-instr port [channel 1])
-  ;; Define a new instrument that uses the given MIDI port index and channel.
-  ;; Channel is optional and defaults to 1.
-  (cond [(and
-          (natural? port) ; For consistency, only allow calling ports by index.
-          (valid-midi-port? port)
-          (valid-midi-channel? channel))
-         (rs-m-instr-struct port channel)]
-        [else #f]))
+(define/contract (rs-m-instr port [channel 1])
+  (->* (valid-midi-port?)
+       (valid-midi-value?)
+       rs-m-instr-struct?)
+  ;; Define a new instrument that uses the given MIDI port (name or
+  ;; index) and channel. 
+  (rs-m-instr-struct port channel))
 
   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -146,7 +146,7 @@
                                         (if (> note-length-ms 0)
                                             note-length-ms
                                             step-time)
-                                        note-length-ms velocity))
+                                        velocity))
                       #:offset offset)]
         [else (printf "Invalid arguments supplied to rs-m-event-play: ~a ~a ~a ~a offset ~a\n"
                       instr note note-length-ms velocity offset)]))
