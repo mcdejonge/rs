@@ -281,6 +281,25 @@ Should you want to set the cc value directly instead of doing so in a sequence
 Set the given cc number to the given value for the given instrument. Supply an offset as needed.
 
 
+@subsection[#:tag "functions-utility"]{Utility functions}
+
+@defproc[(rs-pause [num-loops natural?]
+                   [num-steps zero-or-positive?]) void]
+
+Pause (ie sleep) for the given number of beats and steps. Loop length and step length are calculated based on the global settings. The number of steps can be a fraction, so (rs-pause 2 1/4) would pause for two full loops and a quarter of a step / division length (meaning if the division length is 1/4 this would be two full loops and 1/16 of a beat).
+
+@defproc[(rs-util-diag [message]
+                       [args]) void]
+
+Print a diagnostic message, but only if rs-util-diag-mode (see below) is #t. args are inserted into the message. Printing is done using printf. Basically this is a printf that only runs when diagnostic mode is activated.
+
+NOTE: if you need to perform a function call in one of your args, make sure it only happens when diag-mode is #t, in other words supply a procedure object rather than the result of a procedure call. If you do not do this, performance will suffer greatly as your procedure calls will also be executed if they don't need to be (namely when diag-mode is #f).
+
+
+@defproc [(rs-util-set-diag-mode [mode true-or-false]) void]
+
+Activate (true-or-false is #t) or deactivate (true-or-false is #f) diagnostic mode. Diagnostic mode is #f by default. When #t it prints out a *lot* of messages.
+
 @section{Changelog}
 
 * @bold{2020-05-17} Implemented offsets.

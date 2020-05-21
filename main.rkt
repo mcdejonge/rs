@@ -21,7 +21,8 @@
  rs-main-bpm
  rs-main-div-length
  rs-main-steps
- 
+
+ rs-pause
  rs-queue-track!
  rs-set-global-bpm!
  rs-set-global-div-length!
@@ -62,6 +63,12 @@
 
 (define main-loop '())
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                          ;;
+;; Timing and temp functions and variables.                                 ;;
+;;                                                                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; Timing works as follows: you set the BPM, the length of a single
 ;; division as a fraction of a single beat and the number of such
 ;; divisions that make up a single loop.
@@ -80,19 +87,6 @@
 ; Number of divisions that makes up a loop.
 (define rs-main-steps 16)
 
-
-(struct active-track (track track-thread))
-
-;; A list of active-track structs.
-(define running-tracks '())
-
-;; These tracks will start at the next loop start.
-;; Contains a list of rs-t structs.
-(define queued-tracks '())
-
-;l These tracks will stop at the next loop start.
-;; Contains a list of rs-t structs.
-(define tracks-to-stop '())
 
 (define main-loop-time-in-msecs 0) ; Keep times in msecs as long as possible to avoid doing floating point math.
 
@@ -116,18 +110,50 @@
   (-> positive? void)
   (set! rs-main-div-length div-length))
 
+(define (valid-num-steps-for-pause? num-steps)
+  ;; Helper function for the contract of rs-pause.
+  (or (positive? num-steps)
+      (= 0 num-steps)))
 
-(define/contract (rs-queue-track! track)
-  (-> rs-t? void)
-  ;; Add the given track to the list of tracks to enqueue.
-  (rs-util-diag "Queueing track ~s\n" track)
-  (set! queued-tracks (cons track queued-tracks)))
+(define/contract (rs-pause num-loops num-steps)
+  (-> natural? valid-num-steps-for-pause? void)
+  ;; Pause (ie sleep) for the given number of loops and steps.
+  (define num-ms
+    (+ main-loop-time-in-msecs
+       (* num-steps rs-main-div-length)))
+  (rs-util-rtsleep num-ms))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                          ;;
+;; Queuing and stopping stracks                                             ;;
+;;                                                                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(struct active-track (track track-thread))
+
+;; A list of active-track structs.
+(define running-tracks '())
+
+;; These tracks will start at the next loop start.
+;; Contains a list of rs-t structs.
+(define queued-tracks '())
+
+;l These tracks will stop at the next loop start.
+;; Contains a list of rs-t structs.
+(define tracks-to-stop '())
+
 
 (define (track-or-index? arg)
   ;; Helper function that checks if something is either a track or an
   ;; index.
   (or (rs-t? arg)
       (natural? arg)))
+
+(define/contract (rs-queue-track! track)
+  (-> rs-t? void)
+  ;; Add the given track to the list of tracks to enqueue.
+  (rs-util-diag "Queueing track ~s\n" track)
+  (set! queued-tracks (cons track queued-tracks)))
 
 (define (get-running-track track search-list)
   ;; Return the active-track struct matching the given track (rs-t). Or nothing.
@@ -164,10 +190,14 @@
                #:div-length rs-main-div-length
                #:seq sequence))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                          ;;
+;; Main loop functions.                                                     ;;
+;;                                                                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Void
 (define (rs-start-main-loop!)
-  ; Starts the main loop.
+  ;; Starts the main loop.
   (rs-util-diag "Starting main loop.\n")
   (collect-garbage 'minor)
   (set! main-loop
@@ -208,9 +238,8 @@
             1/20
             )))))
 
-; Void
 (define (rs-stop-main-loop!)
-  ; Stops the main loop and all running tracks.
+  ;; Stops the main loop and all running tracks.
   (rs-util-diag "Stopping maing loop.\n")
   (for ([running-track running-tracks])
     (thread-send (active-track-track-thread running-track) 'stop))
