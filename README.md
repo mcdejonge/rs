@@ -21,19 +21,15 @@ You can have as many tracks, each running their own sequences, each of which can
 
 Programming happens in Racket, so if you can build it in Racket, you can use it to sequence your MIDI (soft) synths.
 
+For more info, see the Scribble documentation contained in this package. Read it online at:
+
+https://docs.racket-lang.org/rs@rs/index.html
+
 ## Status
 
-rs is a hobby project, built to scratch an itch for myself. It does work - on my system at least, which is a Macbook with developer tools installed. If you're not afraid of compiling some code you may very well get it to work on your system as well.
+rs is a hobby project, built to scratch an itch for myself. It does work - on my system at least, which is a Macbook with developer tools installed. I've also heard it runs on Linux (Arch). If you're not afraid of compiling some code you may very well get it to work on your system as well.
 
-Sending MIDI messages is done with a Racket wrapper around the [RtMidi library](https://www.music.mcgill.ca/~gary/rtmidi/). I did not write either the wrapper or the library but did manage to get them to work on my system. Getting the wrapper to work took some elbow grease, however. See the installation instructions.
-
-## Performance
-
-Racket is not built for real time computing and I am not a systems programmer so the timing of rs is a bit ... wobbly. If you examine its output in a DAW you will find events are close to where they should be but not exactly on the grid.
-
-You will probably get the best results from running rs in a REPL on the command line. On my own computer, a 2015 Macbook pro with 8GB RAM and a 2,9 GHz Intel Core i5, this yields quite acceptable timing.
-
-When running the REPL inside Emacs performance is slightly worse but still acceptable. This is what I do. rs *can* also run from DrRacket but I've found this causes noticeably sloppier timing.
+Sending MIDI messages is done with a Racket wrapper around the [RtMidi library](https://www.music.mcgill.ca/~gary/rtmidi/). I did not write either the wrapper or the library but did manage to get them to work on my system. Getting the wrapper to work requires compiling some code, however. See the installation instructions.
 
 ## Installation
 
@@ -66,53 +62,3 @@ Instructions copied and pasted from the [RtMidi documentation](https://docs.rack
 Installing rs itself is a simple matter of installing it using the racket package manager (raco pkg install rs) but you can also download the repository you're currently viewing somewhere.
 
 You will also want to install the demos: https://github.com/mcdejonge/rs-demos , if only because this repository contains a starting template.
-
-## Getting started
-
-1. First, make sure you have at least one available MIDI port on your system that is connected to something that makes a sound. A loopback device to a DAW would be a good choice but hardware should also work.
-
-2. Next, open one of the demo files (available from https://github.com/mcdejonge/rs-demos )in your Racket editing environment of choice and run it. If you've set up everything correctly you should be hearing a simple sequence.
-
-   rs has been tested with DrRacket and with Emacs running racket-mode. When using DrRacket, make sure to disable debugging (Language -> Choose Language -> The Racket Language -> No debugging or profiling). Even with debugging disabled timing in DrRacket is quite sloppy (see "Performance" above) so your best bet is probably to run rs in a REPL in a terminal and to copy and paste commands into it from your editor of choice.
-
-3. Time to start exploring. There are a couple of demo files you can examine to see how rs works. There's also a file called rs-live.rkt that you can load and modify to start doing live coding.
-
-Have fun!
-
-## Changelog
-
-* **2020-05-17** Implemented offsets.
-* **2020-05-14** Provided Scribble documentation.
-
-* **2020-05-13** Turned rs into a package.
-
-* **2020-05-12**
-  * **New feature**: chords
-  
-    Use rs-m-play-chord and rs-m-event-play-chord to play multiple notes simultaneously on the same instrument:
-    
-  ```racket
-  (define chord (rs-m-event-play-chord instr (list 60 65 69))
-  ```
-  
-  * Added polyrhythm demo.
- 
-* **2020-05-10**
-  * **New feature**: Sequences within sequencesa
-  
-    You can now nest sequences, like this:
-  
-  ```racket
-  (define hihats (list hc
-                       ho
-                       hc
-                       (list hh hh hh)))
-  ```
-    
-    A new demo, rs-demo-drums.rkt shows off this feature.
-  * Timing code has been slimmed down, which hopefully increases performance.
-  * rs-util.rkt now exposes (rs-util-set-diag-mode #t|#f) and (rs-util-diag message .args ) so you can have an idea about what rs is doing.
-  * Demos have been put into a separate directory.
-* **2020-05-03** Some cleanup of the demos
-* **2020-05-01** Initial release
-
