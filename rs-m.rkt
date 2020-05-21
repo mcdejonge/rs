@@ -64,6 +64,25 @@
   (and (list? notes)
        (for/and ([note notes]) (valid-midi-value? note))))
 
+(define (valid-note-length? note-length-ms)
+  ;; Helper function that checks if a note length is valid.
+  (and
+   (number? note-length-ms)
+   (> note-length-ms 0)))
+
+(define (valid-note-length-event? note-length-ms)
+  ;; Helper function that checks if a note length for an event (either
+  ;; a number > 0 or 0).
+  (and
+   (number? note-length-ms)
+   (>= note-length-ms 0)))
+
+(define (valid-offset? offset)
+  ;; Helper function that checks if an event offset is valid.
+  (and (real? offset)
+       (> offset -1)
+       (< offset 1)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                           ;;
 ;; Creating instruments.                                                     ;;
@@ -84,97 +103,69 @@
 ;; Playing things and sending MIDI commands.                                 ;;
 ;;                                                                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (rs-m-play-chord instr notes note-length-ms [velocity 127])
+(define/contract (rs-m-play-chord instr notes note-length-ms [velocity 127])
+  (->* (rs-m-instr-struct? valid-notes? valid-note-length?)
+       (valid-midi-value?)
+       any)
   ;; Play a chord. notes is a list of midi note numbers. All notes
   ;; have the same length and will be played at the same velocity.
-  (cond [(and (rs-m-instr-struct? instr)
-              (valid-notes? notes)
-              (natural? note-length-ms)
-              (valid-midi-value? velocity))
-         (instr (lambda (channel)
-                  (map (lambda (note)
-                         (rs-midi-core-send-note! note note-length-ms velocity channel)) notes)))]
-        [else (printf "Invalid arguments supplied to rs-m-play-chord: ~a ~a ~a ~a\n"
-                      instr notes note-length-ms velocity)]))
+  (instr (lambda (channel)
+           (map (lambda (note)
+                  (rs-midi-core-send-note! note note-length-ms velocity channel)) notes))))
 
-(define (rs-m-event-play-chord instr notes [note-length-ms 0] [velocity 127] #:offset [offset 0])
-  ;; Create an rs-e structure that can be used in a sequence for
-  ;; playing chord using the supplied instrument.
-  (cond [(and (rs-m-instr-struct? instr)
-              (valid-notes? notes)
-              (natural? note-length-ms)
-              (> note-length-ms 0)
-              (valid-midi-value? velocity)
-              (and (real? offset)
-                   (> offset -1)
-                   (< offset 1)))
-         (rs-e-create #:fn (lambda (step-time)
-                             (rs-m-play-chord instr notes
-                                              (if (> note-length-ms 0)
-                                                  note-length-ms
-                                                  step-time) velocity))
-                      #:offset offset)]
-        [else (printf "Invalid arguments supplied to rs-m-event-play-chord : ~a ~a ~a ~a offset ~a\n"
-                      instr notes note-length-ms velocity offset)]))
+(define/contract
+  (rs-m-event-play-chord instr notes [note-length-ms 0] [velocity 127] #:offset [offset 0])
+  (->* (rs-m-instr-struct? valid-notes?)
+       (valid-note-length-event? valid-midi-value? #:offset valid-offset?)
+       rs-e?)
+
+  (rs-e-create #:fn (lambda (step-time)
+                      (rs-m-play-chord instr notes
+                                       (if (> note-length-ms 0)
+                                           note-length-ms
+                                           step-time) velocity))
+               #:offset offset))
 
 
-(define (rs-m-play instr note note-length-ms [velocity 127])
-  ;; Play a MIDI note using the supplied instrument.
-  (cond [(and (rs-m-instr-struct? instr)
-              (valid-midi-value? note)
-              (natural? note-length-ms)
-              (> note-length-ms 0)
-              (valid-midi-value? velocity))
-         (instr (lambda (channel)
-                  (rs-midi-core-send-note! note note-length-ms velocity channel)))]
-        [else (printf "Invalid arguments supplied to rs-m-play: ~a ~a ~a ~a\n"
-                      instr note note-length-ms velocity)]))
+(define/contract (rs-m-play instr note note-length-ms [velocity 127])
+  (->* (rs-m-instr-struct? valid-midi-value? valid-note-length?)
+       (valid-midi-value?)
+       any)
+  ;; Play a single MIDI note using the supplied MIDI instrument.
+  (instr (lambda (channel)
+           (rs-midi-core-send-note! note note-length-ms velocity channel))))
 
-(define (rs-m-event-play instr note [note-length-ms 0] [velocity 127] #:offset [offset 0])
+(define/contract
+  (rs-m-event-play instr note [note-length-ms 0] [velocity 127] #:offset [offset 0])
+  (->* (rs-m-instr-struct? valid-midi-value?)
+       (valid-note-length-event? valid-midi-value? #:offset valid-offset?)
+       rs-e?)
   ;; Create an rs-e structure that can be used in a sequence for
   ;; playing a MIDI note using the supplied instrument.
-  (cond [(and (rs-m-instr-struct? instr)
-              (valid-midi-value? note)
-              (natural? note-length-ms)
-              (> note-length-ms 0)
-              (valid-midi-value? velocity)
-              (and (real? offset)
-                   (> offset -1)
-                   (< offset 1)))
-         (rs-e-create #:fn (lambda (step-time)
-                             (rs-m-play instr note
-                                        (if (> note-length-ms 0)
-                                            note-length-ms
-                                            step-time)
-                                        velocity))
-                      #:offset offset)]
-        [else (printf "Invalid arguments supplied to rs-m-event-play: ~a ~a ~a ~a offset ~a\n"
-                      instr note note-length-ms velocity offset)]))
+  (rs-e-create #:fn (lambda (step-time)
+                      (rs-m-play instr note
+                                 (if (> note-length-ms 0)
+                                     note-length-ms
+                                     step-time)
+                                 velocity))
+               #:offset offset))
 
-(define (rs-m-cc instr cc-no cc-val)
+(define/contract (rs-m-cc instr cc-no cc-val)
+  (-> rs-m-instr-struct? valid-midi-value? valid-midi-value? any)
   ;; Set the supplied cc number to the supplied cc value for the
   ;; supplied instrument.
-  (cond [(and (rs-m-instr-struct? instr)
-              (valid-midi-value? cc-no)
-              (valid-midi-value? cc-val))
-         (instr (lambda (channel)
-                  (rs-midi-core-send-cc! cc-no cc-val channel)))]
-        [else (printf "Invalid arguments supplied to rs-m-cc: ~a ~a ~a" instr cc-no cc-val)]))
+  (instr (lambda (channel)
+           (rs-midi-core-send-cc! cc-no cc-val channel))))
 
-(define (rs-m-event-cc instr cc-no cc-val #:offset [offset 0])
+(define/contract (rs-m-event-cc instr cc-no cc-val #:offset [offset 0])
+  (->* (rs-m-instr-struct? valid-midi-value? valid-midi-value?)
+       (#:offset valid-offset?)
+       rs-e?)
   ;; Create an rs-e structure that can be used in a sequence for
   ;; sending a MIDI cc message using the supplied instrument.
-  (cond [(and (rs-m-instr-struct? instr)
-              (valid-midi-value? cc-no)
-              (valid-midi-value? cc-val)
-              (and (real? offset)
-                   (> offset -1)
-                   (< offset 1)))
-         (rs-e-create #:fn (lambda (step-time)
-                             (rs-m-cc instr cc-no cc-val))
-                      #:offset offset)]
-        [else (printf "Invalid arguments supplied to rs-m-event-cc: ~a ~a ~a offset ~a\n"
-                      instr cc-no cc-val offset)]))
+  (rs-e-create #:fn (lambda (step-time)
+                      (rs-m-cc instr cc-no cc-val))
+               #:offset offset))
 
 
 (module+ test
