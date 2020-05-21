@@ -60,7 +60,7 @@
 
  )
 
-(define rs-main-loop '())
+(define main-loop '())
 
 ;; Timing works as follows: you set the BPM, the length of a single
 ;; division as a fraction of a single beat and the number of such
@@ -81,23 +81,23 @@
 (define rs-main-steps 16)
 
 
-(struct rs-main-running-track (track track-thread))
+(struct active-track (track track-thread))
 
-;; A list of rs-main-running-track structs.
-(define rs-main-tracks-running '())
+;; A list of active-track structs.
+(define running-tracks '())
 
 ;; These tracks will start at the next loop start.
 ;; Contains a list of rs-t structs.
-(define rs-main-tracks-queued '())
+(define queued-tracks '())
 
 ;l These tracks will stop at the next loop start.
 ;; Contains a list of rs-t structs.
-(define rs-main-tracks-stopping '())
+(define tracks-to-stop '())
 
-(define rs-main-loop-time-in-msecs 0) ; Keep times in msecs as long as possible to avoid doing floating point math.
+(define main-loop-time-in-msecs 0) ; Keep times in msecs as long as possible to avoid doing floating point math.
 
 (define (rs-main-recalculate-loop-length!)
-  (set! rs-main-loop-time-in-msecs
+  (set! main-loop-time-in-msecs
         (/ 60000 rs-main-bpm)))
 (rs-main-recalculate-loop-length!)
 
@@ -121,7 +121,7 @@
   (-> rs-t? void)
   ;; Add the given track to the list of tracks to enqueue.
   (rs-util-diag "Queueing track ~s\n" track)
-  (set! rs-main-tracks-queued (cons track rs-main-tracks-queued)))
+  (set! queued-tracks (cons track queued-tracks)))
 
 (define (track-or-index? arg)
   ;; Helper function that checks if something is either a track or an
@@ -130,9 +130,9 @@
       (natural? arg)))
 
 (define (get-running-track track search-list)
-  ;; Return the rs-main-running-track struct matching the given track (rs-t). Or nothing.
+  ;; Return the active-track struct matching the given track (rs-t). Or nothing.
   (cond [(null? search-list) null]
-        [(eq? track (rs-main-running-track-track (car search-list)))
+        [(eq? track (active-track-track (car search-list)))
          (car search-list)]
         [else (get-running-track track (cdr search-list))]))
 
@@ -142,17 +142,17 @@
   ;; the track itself.
   (rs-util-diag "Stopping track ~s\n" track)
   (cond [(and (natural? track)
-              (< track (length rs-main-tracks-running)))
-         (define running-track (list-ref rs-main-tracks-running track))
-         (when (not (member running-track rs-main-tracks-stopping))
-           (set! rs-main-tracks-stopping
-                 (cons running-track rs-main-tracks-stopping)))]
+              (< track (length running-tracks)))
+         (define running-track (list-ref running-tracks track))
+         (when (not (member running-track tracks-to-stop))
+           (set! tracks-to-stop
+                 (cons running-track tracks-to-stop)))]
         [(rs-t? track)
-         (define running-track (get-running-track track rs-main-tracks-running))
+         (define running-track (get-running-track track running-tracks))
          (when (and (not (null? running-track))
-                    (not (member running-track rs-main-tracks-stopping)))
-           (set! rs-main-tracks-stopping
-                 (cons running-track rs-main-tracks-stopping)))]
+                    (not (member running-track tracks-to-stop)))
+           (set! tracks-to-stop
+                 (cons running-track tracks-to-stop)))]
         [else (raise "No such track.")])
   (void))
   
@@ -170,7 +170,7 @@
   ; Starts the main loop.
   (rs-util-diag "Starting main loop.\n")
   (collect-garbage 'minor)
-  (set! rs-main-loop
+  (set! main-loop
         (thread
          (lambda ()
            (rs-util-loop-and-wait
@@ -182,29 +182,29 @@
               (thread
                (lambda()
                  (start-atomic)
-                 (for ([track rs-main-tracks-queued])
-                   (set! rs-main-tracks-running
+                 (for ([track queued-tracks])
+                   (set! running-tracks
                          ;; Use append to its easier to deactive threads by index.
-                         (append rs-main-tracks-running
+                         (append running-tracks
                                  (list
-                                  (rs-main-running-track track (rs-t-play! track))))))
-                 (set! rs-main-tracks-queued '())
+                                  (active-track track (rs-t-play! track))))))
+                 (set! queued-tracks '())
                  (end-atomic)
                  ))
               ; Remove tracks that need to be stopped.
               (thread
                (lambda ()
                  (start-atomic)
-                 (for ([track-to-stop rs-main-tracks-stopping])
-                   (thread-send (rs-main-running-track-track-thread track-to-stop) 'stop))
-                 (set! rs-main-tracks-running
-                       (remq* rs-main-tracks-stopping rs-main-tracks-running))
-                 (set! rs-main-tracks-stopping '())
+                 (for ([track-to-stop tracks-to-stop])
+                   (thread-send (active-track-track-thread track-to-stop) 'stop))
+                 (set! running-tracks
+                       (remq* tracks-to-stop running-tracks))
+                 (set! tracks-to-stop '())
                  (end-atomic)))
 
 
               )
-            rs-main-loop-time-in-msecs
+            main-loop-time-in-msecs
             1/20
             )))))
 
@@ -212,10 +212,10 @@
 (define (rs-stop-main-loop!)
   ; Stops the main loop and all running tracks.
   (rs-util-diag "Stopping maing loop.\n")
-  (for ([running-track rs-main-tracks-running])
-    (thread-send (rs-main-running-track-track-thread running-track) 'stop))
-  (set! rs-main-tracks-running '())
-  (kill-thread rs-main-loop))
+  (for ([running-track running-tracks])
+    (thread-send (active-track-track-thread running-track) 'stop))
+  (set! running-tracks '())
+  (kill-thread main-loop))
 
 (module+ test
 
