@@ -224,7 +224,7 @@
                  (play-seq! (rs-e-fn step) corrected-step-length)
                  (rs-util-rtsleep corrected-step-length))]
               [else (rs-util-rtsleep corrected-step-length)]))
-       step-length-ms)))
+       corrected-step-length)))
  
 (define/contract (play-track-seq! track loop-length)
   ;; Play a single iteration of the sequence of a track. Not merged
