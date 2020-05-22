@@ -222,8 +222,7 @@
                     (> (length (rs-e-fn step)) 0))
                (lambda()
                  (rs-util-diag "Encountered sub sequence of ~s items\n" (length (rs-e-fn step)))
-                 (rs-t-play-seq! (rs-e-fn step) corrected-step-length)
-                 (rs-util-rtsleep corrected-step-length))]
+                 (rs-t-play-seq! (rs-e-fn step) corrected-step-length))]
               [else (rs-util-rtsleep corrected-step-length)]))
        corrected-step-length)))
  
