@@ -183,6 +183,11 @@ Creates a new track that uses the global settings for BPM, number of steps and d
 
 Creates a new track but allows you to set some (or all) of the track settings manually.
 
+@defproc[(rs-t-play-seq! [seq list?]
+                         [loop-length positive?]) void]
+
+Plays a sequence during the given time in ms. seq should be a list of null, rs-e? or sequences. Allows you to create events that play sequences (of events that play sequences (of events that play sequences (etc))).
+
 @defstruct[rs-t ([bpm positive?]
                  [steps positive?]
                  [div-length positive?]
@@ -303,7 +308,11 @@ Activate (true-or-false is #t) or deactivate (true-or-false is #f) diagnostic mo
 @section{Changelog}
 
 @itemlist[
-    @item{@bold{2020-05-11}
+    @item{@bold{2020-05-22}
+        @itemlist[
+            @item{Exposed rs-t-play-seq! so you can play sequences manually.}
+            @item{Cleaned up loop playing code.}]}
+    @item{@bold{2020-05-21}
         @itemlist[
             @item{When supplied a note length of 0 (the default) rs-m-event-play and rs-m-event-play-chord will play for the duration of the step.}
             @item{Added rs-pause function.}

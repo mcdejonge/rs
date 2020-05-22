@@ -12,6 +12,7 @@
 (provide (struct-out rs-t)
          rs-t-create
          rs-t-play!
+         rs-t-play-seq!
          rs-t-valid-sequence?)
 
 (struct rs-t (bpm
@@ -197,7 +198,7 @@
     (define step-length-ms (* beat-length-ms (rs-t-div-length track)))
     (* (rs-t-steps track) step-length-ms))
 
-(define/contract (play-seq! seq loop-length)
+(define/contract (rs-t-play-seq! seq loop-length)
   ;; Play a single iteration of a sequence during the given number of
   ;; ms. Not merged with play-track-seq! because we need to be able
   ;; to play nested sequences.
@@ -221,16 +222,16 @@
                     (> (length (rs-e-fn step)) 0))
                (lambda()
                  (rs-util-diag "Encountered sub sequence of ~s items\n" (length (rs-e-fn step)))
-                 (play-seq! (rs-e-fn step) corrected-step-length)
+                 (rs-t-play-seq! (rs-e-fn step) corrected-step-length)
                  (rs-util-rtsleep corrected-step-length))]
               [else (rs-util-rtsleep corrected-step-length)]))
        corrected-step-length)))
  
 (define/contract (play-track-seq! track loop-length)
   ;; Play a single iteration of the sequence of a track. Not merged
-  ;; with play-seq! as play-seq is also used to play nested sequences.
+  ;; with rs-t-play-seq! as play-seq is also used to play nested sequences.
   (-> rs-t? positive? void)
-  (play-seq! (rs-t-seq track) loop-length))
+  (rs-t-play-seq! (rs-t-seq track) loop-length))
     
     
 

@@ -53,6 +53,7 @@
  ; From rs-t.rkt
  (struct-out rs-t)
  rs-t-create
+ rs-t-play-seq!
 
  ; From rs-util.rkt
  rs-util-diag
