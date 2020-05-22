@@ -190,25 +190,24 @@
                 (cons (rs-t-e-dur null 0 length-dummy-event)
                       (append (cdr intermediate) (list (car intermediate))))])]))
     
-  (define/contract (rs-t-calculate-loop-length track)
-  ; Return the length of a single loop of the given track in ms.
-  (-> rs-t? any)
-  (let* ([beat-length-ms (/ 60000 (rs-t-bpm track))]
-         [div-length-ms (* beat-length-ms (rs-t-div-length track))])
-    (round (* (rs-t-steps track) div-length-ms))))
+  (define/contract (calc-loop-length track)
+  ;; Return the length of a single loop of the given track in ms.
+    (-> rs-t? any)
+    (define beat-length-ms (/ 60000 (rs-t-bpm track)))
+    (define step-length-ms (* beat-length-ms (rs-t-div-length track)))
+    (* (rs-t-steps track) step-length-ms))
 
-(define/contract (rs-t-calc-step-time-corrected step last-diff)
-  (-> rs-t-e-dur? number? positive?)
-  ;; Calculate the step time for a step taking into account its proper
-  ;; step time and the difference of the last step.
-  ;; The difference will never be bigger than max-difference.
-  (define max-diff-ratio 1/10) ; Change if needed.
-
-  (define step-pref-length (rs-t-e-dur-duration step))
-  (define max-diff (* (rs-t-e-dur-duration step) max-diff-ratio))
-  (define min-step-length (- step-pref-length max-diff))
-  (define max-step-length (+ step-pref-length max-diff))
-  (max min-step-length (min (- step-pref-length last-diff) max-step-length)))
+(define/contract (calc-time-corrected pref-length last-diff [max-diff-ratio 1/20])
+  (->* (positive? number?)
+       (positive?) positive?)
+  ;; Calculate the corrected length of something (a step or a loop)
+  ;; taking into account the last time it ran. max-diff-ratio is the
+  ;; limit to how much correction will take place (as a ratio of the
+  ;; preferred length).
+  (define max-diff (* pref-length max-diff-ratio))
+  (define min-length (- pref-length max-diff))
+  (define max-length (+ pref-length max-diff))
+  (max min-length (min (- pref-length last-diff) max-length)))
 
 (define/contract (rs-t-play-seq! seq loop-length)
   ;; Play a single iteration of a sequence during the given number of seconds.
@@ -221,7 +220,8 @@
                 seq-playable loop-length step-length-ms)
   (for/fold ([last-diff 0])
             ([step seq-playable])
-    (define corrected-step-length (rs-t-calc-step-time-corrected step last-diff))
+    (define corrected-step-length
+      (calc-time-corrected (rs-t-e-dur-duration step) last-diff))
     (rs-util-diag "Playing step ~s for time ~s\n" step corrected-step-length)
     (- (rs-util-run-timed-ms
         (cond [(procedure? (rs-e-fn step))
@@ -240,6 +240,7 @@
   ;; Play a single iteration of the main sequence for the track.
   ;; Separated out into a function to load the current sequence from
   ;; the track at the start of every iteration.
+  ;; TODO nonsense.
   (-> rs-t? positive? void)
   (rs-t-play-seq! (rs-t-seq track) loop-length))
     
@@ -255,29 +256,44 @@
   (rs-util-diag "Creating a new thread for playing thread ~s\n" track)
   (thread
    (lambda ()
-     (rs-util-loop-and-wait
-      (lambda ()
-        (collect-garbage 'minor)
-        (thread (lambda ()
-                  (rs-t-play-single-loop! track (rs-t-calculate-loop-length track))))
-        (match (thread-try-receive)
-          ; If all you want to do is change the sequence, you do not
-          ; need to send a new track as the new sequence is picked upu
-          ; automatically. You only need this if you want to replace
-          ; the currently running track with another.
-          [(? rs-t? new-track-info)
-           (set! track new-track-info)
-           #t]
-          [ 'stop #f]
-          [ #f #t])
-        )
-      (rs-t-calculate-loop-length track) 1/10))))
-
+     (let loop ([last-diff 0])
+       ;; It's possible the loop length has changed since the last
+       ;; time we checked it, so update it each iteration.
+       (define loop-length (calc-loop-length track))
+       (define corrected-loop-length
+         (calc-time-corrected loop-length last-diff))
+       (rs-util-diag "Starting new iteration of track loop of ~s ms for ~s ms (diff: ~s)\n"
+                     loop-length
+                     corrected-loop-length
+                     last-diff)
+       (define fn-to-run
+         (lambda ()
+           (collect-garbage 'minor)
+           (rs-t-play-single-loop! track corrected-loop-length)))
+       
+       (match (thread-try-receive)
+         ;; Send a track struct if you want to update *all* the track
+         ;; settings, not just the sequence (for that you can just
+         ;; change the sequence of the currently running thread).
+         [(? rs-t? new-track-info)
+          (set! track new-track-info)
+          (loop (- (rs-util-run-timed-ms fn-to-run) loop-length))]
+         [ 'stop #f]
+         [ #f (loop (- (rs-util-run-timed-ms fn-to-run) loop-length))])))))
 
 
   
 (module+ test
   (require rackunit)
+
+  (define (rs-t-test-calc-loop-length)
+    (define track (rs-t-create #:bpm 120
+                               #:steps 4
+                               #:div-length 1/4
+                               #:seq (list '() '() '() '())))
+    (check-equal? (calc-loop-length track) 500))
+  (rs-t-test-calc-loop-length)
+  
   (rs-util-set-diag-mode #f)
 
   (define (rs-t-test-add-duration)
@@ -425,7 +441,7 @@
            [sequence2
             (list '() event2 '() event2 '() event2)]
            [track
-            (rs-t-create #:bpm 128 #:seq sequence1)])
+            (rs-t-create #:bpm 120 #:steps 4 #:seq sequence1)])
       (define track-thread (rs-t-play! track))
       (sleep 1)
       (set-rs-t-seq! track sequence2)
@@ -439,7 +455,7 @@
                        (> val-event2 1))
                   "Both sequenced events did not run more than once.")))
   ;; TODO
-  ;; (rs-util-set-diag-mode #f)
+   (rs-util-set-diag-mode #t)
    (rs-t-test)
   
   )
