@@ -111,7 +111,7 @@
   ;; have the same length and will be played at the same velocity.
   (instr (lambda (channel)
            (map (lambda (note)
-                  (rs-midi-core-send-note! note note-length-ms velocity channel)) notes))))
+                  (rs-midi-core-send-note! note (round note-length-ms) velocity channel)) notes))))
 
 (define/contract
   (rs-m-event-play-chord instr notes [note-length-ms 0] [velocity 127] #:offset [offset 0])
@@ -133,7 +133,7 @@
        any)
   ;; Play a single MIDI note using the supplied MIDI instrument.
   (instr (lambda (channel)
-           (rs-midi-core-send-note! note note-length-ms velocity channel))))
+           (rs-midi-core-send-note! note (round note-length-ms) velocity channel))))
 
 (define/contract
   (rs-m-event-play instr note [note-length-ms 0] [velocity 127] #:offset [offset 0])
