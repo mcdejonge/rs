@@ -46,7 +46,7 @@
 ;; Subtype of rs-e that has a field for the duration in ms.
 (struct rs-t-e-dur rs-e (duration) #:mutable)
 
-(define/contract (rs-t-add-duration-to-seq seq step-time-ms)
+(define/contract (add-duration-to-seq seq step-time-ms)
   (-> list? positive? list?)
   ;; Turn a list of rs-e events into a list of rs-t-e-dur events,
   ;; setting the duration to the given step time.
@@ -68,7 +68,7 @@
                                  step-time-ms)
                      ])) seq))
 
-(define/contract (rs-t-process-offsets seq )
+(define/contract (process-offsets seq )
   (-> list? list?)
   ;; Process the durations of the items in a sequence of events (that
   ;; are already turned into rs-t-e-dur events).
@@ -209,13 +209,15 @@
   (define max-length (+ pref-length max-diff))
   (max min-length (min (- pref-length last-diff) max-length)))
 
-(define/contract (rs-t-play-seq! seq loop-length)
-  ;; Play a single iteration of a sequence during the given number of seconds.
+(define/contract (play-seq! seq loop-length)
+  ;; Play a single iteration of a sequence during the given number of
+  ;; ms. Not merged with play-track-seq! because we need to be able
+  ;; to play nested sequences.
   (-> list? positive? void)
   (define step-length-ms (/ loop-length (length seq)))
   (define seq-playable
-    (rs-t-process-offsets
-     (rs-t-add-duration-to-seq seq step-length-ms)))
+    (process-offsets
+     (add-duration-to-seq seq step-length-ms)))
   (rs-util-diag "Playing sequence ~s for loop length ~s and step time ~s.\n"
                 seq-playable loop-length step-length-ms)
   (for/fold ([last-diff 0])
@@ -231,18 +233,16 @@
                     (> (length (rs-e-fn step)) 0))
                (lambda()
                  (rs-util-diag "Encountered sub sequence of ~s items\n" (length (rs-e-fn step)))
-                 (rs-t-play-seq! (rs-e-fn step) corrected-step-length)
+                 (play-seq! (rs-e-fn step) corrected-step-length)
                  (rs-util-rtsleep corrected-step-length))]
               [else (rs-util-rtsleep corrected-step-length)]))
        step-length-ms)))
  
-(define/contract (rs-t-play-single-loop! track loop-length)
-  ;; Play a single iteration of the main sequence for the track.
-  ;; Separated out into a function to load the current sequence from
-  ;; the track at the start of every iteration.
-  ;; TODO nonsense.
+(define/contract (play-track-seq! track loop-length)
+  ;; Play a single iteration of the sequence of a track. Not merged
+  ;; with play-seq! as play-seq is also used to play nested sequences.
   (-> rs-t? positive? void)
-  (rs-t-play-seq! (rs-t-seq track) loop-length))
+  (play-seq! (rs-t-seq track) loop-length))
     
     
 
@@ -269,7 +269,7 @@
        (define fn-to-run
          (lambda ()
            (collect-garbage 'minor)
-           (rs-t-play-single-loop! track corrected-loop-length)))
+           (play-track-seq! track corrected-loop-length)))
        
        (match (thread-try-receive)
          ;; Send a track struct if you want to update *all* the track
@@ -297,8 +297,8 @@
   (rs-util-set-diag-mode #f)
 
   (define (rs-t-test-add-duration)
-    ;; Tests for the rs-t-add-duration-to-seq function.
-    (define processed (rs-t-add-duration-to-seq
+    ;; Tests for the add-duration-to-seq function.
+    (define processed (add-duration-to-seq
                        (list '()
                              (rs-e-create #:fn (lambda (arg) void)))
                        100))
@@ -325,7 +325,7 @@
   (rs-t-test-add-duration)
 
   (define (rs-t-test-process-offsets)
-    ;; Tests for the rs-t-process-offsets function.
+    ;; Tests for the process-offsets function.
 
     (define e-none (rs-e-create #:fn (lambda (x) void)))
     (define e-neg (rs-e-create #:fn (lambda (x) void) #:offset -1/4))
@@ -333,8 +333,8 @@
     
     ;; Test sequences without offsets.
     (define seq-no-offset
-      (rs-t-process-offsets
-       (rs-t-add-duration-to-seq (list '() e-none '() e-none) 100)))
+      (process-offsets
+       (add-duration-to-seq (list '() e-none '() e-none) 100)))
     
     (check-true (and (= (rs-t-e-dur-duration (car seq-no-offset)) 100)
                      (= (rs-t-e-dur-duration (car (cdr seq-no-offset))) 100)
@@ -346,7 +346,7 @@
       ;; Helper function for testing the outcomes of various configurations.
       (check-equal?
        (map rs-t-e-dur-duration
-            (rs-t-process-offsets (rs-t-add-duration-to-seq seq step-time-ms)))
+            (process-offsets (add-duration-to-seq seq step-time-ms)))
        lengths msg))
 
     (validate (list e-none e-neg e-neg e-none)
