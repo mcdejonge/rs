@@ -25,6 +25,9 @@ For more info, see the Scribble documentation contained in this package. Read it
 
 https://docs.racket-lang.org/rs@rs/index.html
 
+If you'd prefer to watch a brief and very bad video that shows how to set things up (on a Mac), go here: https://www.youtube.com/watch?v=Pd605Yfnrs4
+
+
 ## Status
 
 rs is a hobby project, built to scratch an itch for myself. It does work - on my system at least, which is a Macbook with developer tools installed. I've also heard it runs on Linux (Arch). If you're not afraid of compiling some code you may very well get it to work on your system as well.
