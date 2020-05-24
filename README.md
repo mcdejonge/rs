@@ -25,7 +25,7 @@ For more info, see the Scribble documentation contained in this package. Read it
 
 https://docs.racket-lang.org/rs@rs/index.html
 
-If you'd prefer to watch a brief and very bad video that shows how to set things up (on a Mac), go here: https://www.youtube.com/watch?v=Pd605Yfnrs4
+If you'd prefer to watch a brief and very bad video that shows how to set things up (on a Mac), go here: https://www.youtube.com/watch?v=GYTyBV1PdXw
 
 
 ## Status

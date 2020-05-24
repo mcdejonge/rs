@@ -39,7 +39,7 @@ sloppier).
 
 Programming happens in Racket, so if you can build it in Racket, you can use it to sequence your MIDI (soft) synths.
 
-If you want to see how it works, there's a short video (with awful audio, sorry my computer can't do screencasts of audio applications very well) @hyperlink["https://www.youtube.com/watch?v=Pd605Yfnrs4" "here"].
+If you want to see how it works, there's a short video (with awful audio, sorry my computer can't do screencasts of audio applications very well) @hyperlink["https://www.youtube.com/watch?v=GYTyBV1PdXw" "here"].
 
 
 @local-table-of-contents[]
