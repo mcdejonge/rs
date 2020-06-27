@@ -25,6 +25,10 @@ For more info, see the Scribble documentation contained in this package. Read it
 
 https://docs.racket-lang.org/rs@rs/index.html
 
+You will probably also want to install [rs-l](https://github.com/mcdejonge/rs-l), a library that contains utilities for sequencing. It makes it easy to do things like making event triggering conditional and rotating sequences. Read about it here:
+
+https://docs.racket-lang.org/rs-l/index.html
+
 If you'd prefer to watch a brief and very bad video that shows how to set things up (on a Mac), go here: https://www.youtube.com/watch?v=GYTyBV1PdXw
 
 
