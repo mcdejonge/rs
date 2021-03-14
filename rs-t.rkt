@@ -236,7 +236,7 @@
 
 (define (event-or-null? input)
   ; Check if something is an event (see rs-e) or null.
-  (or (rs-e? input) (null? input)))
+  (or (rs-e? input) (null? input) (list? input)))
 
 (define (rs-t-play! track)
   (-> rs-t? thread?)
