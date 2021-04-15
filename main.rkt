@@ -12,9 +12,6 @@
 
 ;; Main rs file. Contains the main loop and functions for interacting with it.
 
-;; This should make the GC work more often, but do less work every
-;; time making performance more constant (hopefully).
-(collect-garbage 'incremental)
 
 (provide
 
@@ -206,6 +203,9 @@
          (lambda ()
            (rs-util-loop-and-wait
             (lambda ()
+              ;; This should make the GC work more often, but do less work every
+              ;; time making performance more constant (hopefully).
+              (collect-garbage 'incremental)
               (collect-garbage 'minor)
               ; Start new tracks as needed.  This is atomic because the
               ; new track queue needs to be empty when this is done. (I
@@ -213,6 +213,7 @@
               (thread
                (lambda()
                  (start-atomic)
+                 (collect-garbage 'incremental)
                  (for ([track queued-tracks])
                    (set! running-tracks
                          ;; Use append to its easier to deactive threads by index.
